@@ -150,33 +150,62 @@ async function applyOne(tx: Tx, userId: string, op: SyncOp): Promise<void> {
   switch (op.t) {
     case 'set_progress': {
       const pass = currentPass(existing);
+
+      // Clamp to the episode count. A client should not send more than the
+      // show has, but "should not" is not a guarantee: a stale episode count,
+      // a typo in a script, or a buggy client otherwise writes 999999/24,
+      // which renders as nonsense and makes every progress bar meaningless.
+      const w = await tx.query.work.findFirst({ where: eq(work.id, op.workId) });
+      const cap = w?.episodeCount ?? null;
+      const value = cap !== null ? Math.min(op.value, cap) : op.value;
       if (op.pass < pass) return; // stale device, already superseded
       if (op.pass > pass) {
         // A rewatch we have not seen yet — its start_rewatch op is still in
         // flight or was lost. Accept it rather than dropping the episode.
         await tx
           .update(userWork)
-          .set({ rewatching: true, progress: op.value, lastWatchedAt: now })
+          .set({ rewatching: true, progress: value, lastWatchedAt: now })
           .where(where);
         return;
       }
+      const nextProgress = Math.max(existing.progress, value); // never rewind
+      // Reaching the last episode IS finishing it. The web client sends a
+      // `complete` op at the end, so without this a direct API call would
+      // leave a title sitting at 24/24 and still "watching" — the same action
+      // producing two different states depending on the client.
+      const finished = cap !== null && nextProgress >= cap;
+
       await tx
         .update(userWork)
         .set({
-          progress: Math.max(existing.progress, op.value), // never rewind
+          progress: nextProgress,
           lastWatchedAt: now,
-          status:
-            existing.status === 'planned' && op.value > 0 ? 'watching' : existing.status,
+          status: finished
+            ? 'completed'
+            : existing.status === 'planned' && value > 0
+              ? 'watching'
+              : existing.status,
+          completedAt: finished ? (existing.completedAt ?? now) : existing.completedAt,
+          rewatching: finished ? false : existing.rewatching,
           startedAt: existing.startedAt ?? now,
         })
         .where(where);
 
       await tx
         .insert(watchSession)
-        .values({ userId, workId: op.workId, passNo: pass, progress: op.value })
+        .values({
+          userId,
+          workId: op.workId,
+          passNo: pass,
+          progress: value,
+          completedAt: finished ? now : null,
+        })
         .onConflictDoUpdate({
           target: [watchSession.userId, watchSession.workId, watchSession.passNo],
-          set: { progress: sql`greatest(${watchSession.progress}, ${op.value})` },
+          set: {
+            progress: sql`greatest(${watchSession.progress}, ${value})`,
+            ...(finished ? { completedAt: now } : {}),
+          },
         });
       return;
     }
