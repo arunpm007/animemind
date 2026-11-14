@@ -6,9 +6,11 @@ import type {
   LibrarySeriesEntry,
   SearchResult,
   SeriesDetail,
+  UpNext,
+  UpNextRow,
   WatchStateDto,
 } from '@/contracts';
-import { asUser, unscoped } from '../db/client';
+import { asUser, unscoped, type Transaction } from '../db/client';
 import { account, series, seriesMember, userWork, work } from '../db/schema';
 import type { Actor } from '../http/api';
 import { HttpError, notFound } from '../http/api';
@@ -133,12 +135,12 @@ export async function search(
     .filter((w): w is WorkRow => Boolean(w))
     .map((w) => {
       const owned = mine.get(w.id);
+      const held = Boolean(owned && !owned.deletedAt);
       return {
         ...toWorkSummary(w),
-        inLibrary: Boolean(owned && !owned.deletedAt),
-        libraryStatus: (owned && !owned.deletedAt ? owned.status : null) as
-          | WatchStateDto
-          | null,
+        inLibrary: held,
+        libraryStatus: (held ? owned!.status : null) as WatchStateDto | null,
+        libraryProgress: held ? owned!.progress : null,
       };
     });
 
@@ -269,6 +271,43 @@ async function seriesSlugsFor(
  * Ordered by what the user would say out loud. "I'm watching Attack on Titan"
  * is true the moment any season is in progress, regardless of the other five.
  */
+/**
+ * The entry that immediately follows each of `fromIds` on its own spine.
+ *
+ * Built with the query builder rather than raw SQL: interpolating a JS array
+ * into a sql`` template spreads it into ANY($1, $2, $3), which is a syntax
+ * error. inArray binds it as a single array parameter.
+ */
+async function spineSuccessorsOf(
+  tx: Transaction,
+  fromIds: string[],
+): Promise<{ nextId: string; fromTitle: string }[]> {
+  if (!fromIds.length) return [];
+
+  const m1 = alias(seriesMember, 'm1');
+  const m2 = alias(seriesMember, 'm2');
+
+  return tx
+    .selectDistinct({
+      nextId: m2.workId,
+      // Match the title the user sees everywhere else; falling back to romaji
+      // here made the same show appear under two different names on one
+      // screen.
+      fromTitle: sql<string>`coalesce(${work.titleEnglish}, ${work.titleRomaji})`,
+    })
+    .from(m1)
+    .innerJoin(
+      m2,
+      and(
+        eq(m2.seriesId, m1.seriesId),
+        // the immediately following entry on the same spine
+        eq(m2.spineOrd, sql`${m1.spineOrd} + 1`),
+      ),
+    )
+    .innerJoin(work, eq(work.id, m1.workId))
+    .where(and(inArray(m1.workId, fromIds), isNotNull(m1.spineOrd)));
+}
+
 function deriveSeriesStatus(states: UserWorkRow[]): WatchStateDto {
   if (!states.length) return 'planned';
   if (states.some((s) => s.status === 'watching' || s.rewatching)) return 'watching';
@@ -361,6 +400,54 @@ export async function listLibrarySeries(
       (m) => m.status === 'finished' || m.status === 'airing',
     );
 
+    /**
+     * Episode-level progress across the spine.
+     *
+     * Entry counts flatter long franchises and punish short ones: "1 of 2
+     * entries" of One Piece reads as halfway and is nowhere near it. Counted
+     * over the spine only, to stay consistent with totalEntries.
+     */
+    const rollSpine = spine.length
+      ? spine
+      : members.filter((m) => ownedByWork.has(m.w.id));
+
+    let episodesWatched = 0;
+    let episodesTotal: number | null = 0;
+    let availableNow = 0;
+
+    for (const m of rollSpine) {
+      const o = ownedByWork.get(m.w.id);
+      const count = m.w.episodeCount;
+
+      // An entry marked completed counts in full even if the episode counter
+      // was never ticked up — people mark a season watched without walking
+      // the stepper to 12.
+      if (o) {
+        episodesWatched +=
+          o.uw.status === 'completed'
+            ? (count ?? o.uw.progress)
+            : Math.min(o.uw.progress, count ?? o.uw.progress);
+      }
+
+      // One unknown count makes the whole total a guess, so say so rather
+      // than quietly reporting a smaller number as if it were the truth.
+      if (episodesTotal !== null) {
+        episodesTotal = count === null ? null : episodesTotal + count;
+      }
+
+      const released = m.w.releaseStatus === 'finished' || m.w.releaseStatus === 'airing';
+      // Anything already decided on or under way is not backlog: dropped is a
+      // choice, and the entry in progress is reported by `current` instead,
+      // so counting it here would show it twice on one row.
+      const settled =
+        o &&
+        (o.uw.status === 'completed' ||
+          o.uw.status === 'dropped' ||
+          o.uw.status === 'watching' ||
+          o.uw.progress > 0);
+      if (released && !settled) availableNow += 1;
+    }
+
     out.push({
       seriesId: s.id,
       slug: s.slug,
@@ -384,6 +471,9 @@ export async function listLibrarySeries(
         : null,
       missingEntries,
       hasUnwatchedNext,
+      episodesWatched,
+      episodesTotal,
+      availableNow,
       lastWatchedAt:
         states
           .map((x) => x.lastWatchedAt)
@@ -615,31 +705,7 @@ export async function getDashboard(actor: Actor): Promise<Dashboard> {
     const waitingOn: Dashboard['waitingOn'] = [];
 
     if (completedIds.length) {
-      // Built with the query builder rather than raw SQL: interpolating a JS
-      // array into a sql`` template spreads it into ANY($1, $2, $3), which is
-      // a syntax error. inArray binds it as a single array parameter.
-      const m1 = alias(seriesMember, 'm1');
-      const m2 = alias(seriesMember, 'm2');
-
-      const successors = await tx
-        .selectDistinct({
-          nextId: m2.workId,
-          // Match the title the user sees everywhere else; falling back to
-          // romaji here made the same show appear under two different names
-          // on one screen.
-          fromTitle: sql<string>`coalesce(${work.titleEnglish}, ${work.titleRomaji})`,
-        })
-        .from(m1)
-        .innerJoin(
-          m2,
-          and(
-            eq(m2.seriesId, m1.seriesId),
-            // the immediately following entry on the same spine
-            eq(m2.spineOrd, sql`${m1.spineOrd} + 1`),
-          ),
-        )
-        .innerJoin(work, eq(work.id, m1.workId))
-        .where(and(inArray(m1.workId, completedIds), isNotNull(m1.spineOrd)));
+      const successors = await spineSuccessorsOf(tx, completedIds);
 
       const nextIds = successors.map((s) => s.nextId).filter((id) => !ownedIds.has(id));
       if (nextIds.length) {
@@ -677,5 +743,257 @@ export async function getDashboard(actor: Actor): Promise<Dashboard> {
       newlyAvailable: newlyAvailable.slice(0, 8),
       waitingOn: waitingOn.slice(0, 12),
     };
+  });
+}
+
+/* ──────────────────────────────── up next ─────────────────────────────── */
+
+/**
+ * The backlog: what you could watch tonight, and how far in you already are.
+ *
+ * This exists because `planned` and `on_hold` previously had nowhere to go.
+ * The add sheet told people both went to "Library", and the library is a
+ * poster wall sorted by recency — so the two states that mean "I intend to
+ * come back to this" were the two the app could not show you.
+ *
+ * Worse, intent was actively punished. Today's "arrived since you last
+ * looked" is built from successors NOT already in the library, so the moment
+ * you acknowledged a new season by adding it as plan-to-watch, it dropped off
+ * the home page and landed nowhere. Doing nothing kept it visible; recording
+ * your intent hid it. This page is where it lands instead.
+ *
+ * Three buckets, ordered by how much the user has already invested, and
+ * deliberately disjoint so nothing is listed twice:
+ *
+ *   paused          owned, on_hold            — time already spent
+ *   readyToStart    owned, planned, aired     — intent already stated
+ *   continueSeries  NOT owned, follows a completed entry, aired
+ */
+export async function getUpNext(actor: Actor): Promise<UpNext> {
+  // Resolved before the transaction below, not inside it: listLibrarySeries
+  // opens its own asUser scope, and nesting would put a transaction inside a
+  // transaction to no purpose.
+  const rollups = await listLibrarySeries(actor);
+  const rollBySeries = new Map(rollups.map((r) => [r.seriesId, r]));
+
+  return asUser(actor.userId, async (tx) => {
+    const owned = await tx
+      .select({ uw: userWork, w: work })
+      .from(userWork)
+      .innerJoin(work, eq(work.id, userWork.workId))
+      .where(and(eq(userWork.userId, actor.userId), isNull(userWork.deletedAt)));
+
+    const ownedIds = new Set(owned.map((o) => o.w.id));
+    const completedIds = owned
+      .filter((o) => o.uw.status === 'completed')
+      .map((o) => o.w.id);
+
+    const successors = await spineSuccessorsOf(tx, completedIds);
+    const nextIds = successors.map((s) => s.nextId).filter((id) => !ownedIds.has(id));
+    const nextWorks = nextIds.length
+      ? await tx.select().from(work).where(inArray(work.id, nextIds))
+      : [];
+
+    // work → series, so each row can carry its franchise roll-up.
+    const allIds = [...ownedIds, ...nextIds];
+    const member = allIds.length
+      ? await tx
+          .select({
+            workId: seriesMember.workId,
+            seriesId: seriesMember.seriesId,
+            spineOrd: seriesMember.spineOrd,
+          })
+          .from(seriesMember)
+          .where(inArray(seriesMember.workId, allIds))
+      : [];
+    /**
+     * A work belongs to MORE THAN ONE series, so pick deliberately.
+     *
+     * Fullmetal Alchemist (2003) and Brotherhood each head their own series
+     * and each appear in the other's as an alternative version. Building the
+     * lookup with `new Map(rows.map(...))` silently kept whichever row came
+     * back last, so the 2003 series was read as on-spine (true in its own
+     * series) while pointing at Brotherhood's — it wore Brotherhood's
+     * "0 of 1 watched, 0/64 eps", and because both then hashed to the same
+     * series the two were collapsed into one row and Brotherhood vanished.
+     *
+     * A work's home is the series whose MAIN LINE it sits on. Only if it is
+     * nobody's main line does any membership do.
+     */
+    const seriesByWork = new Map<string, string>();
+    const spineOrdByWork = new Map<string, number>();
+    for (const m of member) {
+      if (m.spineOrd === null || spineOrdByWork.has(m.workId)) continue;
+      spineOrdByWork.set(m.workId, m.spineOrd);
+      seriesByWork.set(m.workId, m.seriesId);
+    }
+    for (const m of member) {
+      if (!seriesByWork.has(m.workId)) seriesByWork.set(m.workId, m.seriesId);
+    }
+
+    const aired = (w: WorkRow) =>
+      w.releaseStatus === 'finished' || w.releaseStatus === 'airing';
+
+    /** On the main line, as opposed to a film, OVA or alternative version. */
+    const onSpine = (w: WorkRow) => spineOrdByWork.has(w.id);
+    const seriesOf = (w: WorkRow) => rollBySeries.get(seriesByWork.get(w.id) ?? '');
+
+    /**
+     * The franchise roll-up belongs to the main line only.
+     *
+     * An extra shares a series with the spine but is not counted in it, so
+     * lending it the spine's numbers states something false: Fullmetal
+     * Alchemist (2003) is a 51-episode retelling, and it was displaying
+     * Brotherhood's "0 of 1 watched, 0/64 eps" as if the two were one story.
+     */
+    const rollOf = (w: WorkRow) => (onSpine(w) ? seriesOf(w) : undefined);
+
+    const rowFor = (
+      w: WorkRow,
+      uw: UserWorkRow | null,
+      reason: string | null,
+    ): UpNextRow => {
+      const roll = rollOf(w);
+      // The link is useful even for an extra; only the counts are withheld.
+      const series = seriesOf(w);
+      const own = w.titleEnglish ?? w.titleRomaji;
+      return {
+        work: toWorkSummary(w),
+        seriesSlug: series?.slug ?? null,
+        // Only when it adds something. Printing "Mashle" under "Mashle" is
+        // noise, and the row has little enough room as it is.
+        seriesTitle: series && series.title !== own ? series.title : null,
+        reason,
+        progress: uw ? uw.progress : null,
+        lastWatchedAt: uw?.lastWatchedAt?.toISOString() ?? null,
+        entriesWatched: roll?.completedEntries ?? 0,
+        entriesTotal: roll?.totalEntries ?? 1,
+        /**
+         * `roll ? x : y`, never `roll?.x ?? y`.
+         *
+         * episodesTotal is deliberately null when any entry on the spine has
+         * no episode count yet, and `??` cannot tell that apart from having
+         * no series at all — so it fell through to this one work's own count
+         * and reported it as the franchise total. Solo Leveling, whose third
+         * season is unannounced, rendered "5/12" when the truthful answer is
+         * "5 of we-don't-know". A total that is quietly wrong is worse than
+         * one that admits it.
+         */
+        episodesWatched: roll ? roll.episodesWatched : (uw?.progress ?? 0),
+        episodesTotal: roll ? roll.episodesTotal : w.episodeCount,
+        availableNow: roll?.availableNow ?? 0,
+      };
+    };
+
+    /**
+     * Rank by when the user last touched the FRANCHISE, not this entry.
+     *
+     * A planned season of something finished last week should outrank a
+     * cold plan-to-watch added a year ago, and an entry never started has no
+     * date of its own to sort by. A never-touched series falls to 0 and
+     * sinks, which is the right place for it.
+     */
+    const seriesRecency = (w: WorkRow) => {
+      const at = rollOf(w)?.lastWatchedAt;
+      return at ? Date.parse(at) : 0;
+    };
+    const byRecency = (a: WorkRow, b: WorkRow) => seriesRecency(b) - seriesRecency(a);
+
+    /* ── one row per series, not one per entry ── */
+
+    type Candidate = { w: WorkRow; uw: UserWorkRow | null; reason: string | null };
+
+    /**
+     * Of several entries of one franchise, the one to watch NEXT.
+     *
+     * Spine order first, because that is the order the story happens in.
+     * Air date breaks a tie, and the title settles the rest so the page does
+     * not reshuffle between loads.
+     */
+    const nextFirst = (a: Candidate, b: Candidate) => {
+      const oa = spineOrdByWork.get(a.w.id) ?? Number.MAX_SAFE_INTEGER;
+      const ob = spineOrdByWork.get(b.w.id) ?? Number.MAX_SAFE_INTEGER;
+      if (oa !== ob) return oa - ob;
+      const da = a.w.startDate ?? '9999-99-99';
+      const dbb = b.w.startDate ?? '9999-99-99';
+      if (da !== dbb) return da < dbb ? -1 : 1;
+      return (a.w.titleEnglish ?? a.w.titleRomaji).localeCompare(
+        b.w.titleEnglish ?? b.w.titleRomaji,
+      );
+    };
+
+    /**
+     * A franchise is ONE decision, so it gets one row.
+     *
+     * Listing every qualifying entry meant Bleach filled four consecutive
+     * rows — Thousand-Year Blood War parts 1 to 4 — each printing the same
+     * "1 of 5 watched · 366/416 eps · 4 ready", because that line describes
+     * the franchise and all four rows shared it. Four rows, one fact, and
+     * every other series pushed off the screen behind them. The answer is the
+     * earliest unwatched entry; "4 ready" on it already says there is more
+     * behind it, and the series page has the detail.
+     *
+     * Only the MAIN LINE collapses. A film or an alternative version is a
+     * separate thing to decide about, not a later part of the same one.
+     *
+     * `claimed` is shared across the buckets, in the order they are built, so
+     * a franchise that qualifies twice appears in the bucket representing the
+     * most investment — being paused partway outranks never having started.
+     */
+    const claimed = new Set<string>();
+    const oneEach = (cands: Candidate[]): Candidate[] => {
+      const groups = new Map<string, Candidate[]>();
+      for (const c of cands) {
+        const sid = seriesByWork.get(c.w.id);
+        const key = sid && onSpine(c.w) ? `s:${sid}` : `w:${c.w.id}`;
+        const g = groups.get(key);
+        if (g) g.push(c);
+        else groups.set(key, [c]);
+      }
+      const out: Candidate[] = [];
+      for (const [key, g] of groups) {
+        if (claimed.has(key)) continue;
+        claimed.add(key);
+        out.push(g.sort(nextFirst)[0]);
+      }
+      return out;
+    };
+
+    const paused = oneEach(
+      owned
+        .filter((o) => o.uw.status === 'on_hold')
+        .map((o) => ({ w: o.w, uw: o.uw, reason: null })),
+    )
+      // These have a real date of their own — when you stopped.
+      .sort(
+        (a, b) =>
+          (b.uw?.lastWatchedAt?.getTime() ?? 0) - (a.uw?.lastWatchedAt?.getTime() ?? 0),
+      )
+      .map((c) => rowFor(c.w, c.uw, null));
+
+    const readyToStart = oneEach(
+      owned
+        .filter((o) => o.uw.status === 'planned' && aired(o.w))
+        .map((o) => ({ w: o.w, uw: o.uw, reason: null })),
+    )
+      .sort((a, b) => byRecency(a.w, b.w))
+      .map((c) => rowFor(c.w, c.uw, null));
+
+    const fromTitle = new Map(successors.map((s) => [s.nextId, s.fromTitle]));
+    const continueSeries = oneEach(
+      nextWorks
+        .filter(aired)
+        .map((w) => ({ w, uw: null, reason: `follows ${fromTitle.get(w.id) ?? ''}` })),
+    )
+      .sort((a, b) => byRecency(a.w, b.w))
+      .map((c) => rowFor(c.w, null, c.reason));
+
+    // Not actionable yet, but it was added or awaited, so the page has to say
+    // where it went rather than appear to have lost it.
+    const notOutYet =
+      owned.filter((o) => o.uw.status === 'planned' && !aired(o.w)).length +
+      nextWorks.filter((w) => !aired(w)).length;
+
+    return { paused, readyToStart, continueSeries, notOutYet };
   });
 }

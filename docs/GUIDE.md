@@ -6,14 +6,15 @@ comes next, whether it's out yet — the app works out for you.
 
 ---
 
-## The five screens
+## The six screens
 
 | Screen | Answers |
 |---|---|
 | **Today** | "What wants my attention right now?" |
-| **Library** | "What have I got?" |
+| **Up next** | "What could I actually watch tonight?" |
 | **Watching** | "What am I partway through?" |
 | **Waiting** | "What am I waiting on?" |
+| **Library** | "What have I got?" |
 | **Series** | "Where am I in *this* show, and what's next?" |
 
 Anything in your library is clickable — a poster takes you to its series page,
@@ -159,7 +160,56 @@ shows **↻ watched 2×**.
 
 ---
 
-## Flow 6 — Waiting for the next season
+## Flow 6 — Deciding what to watch next
+
+**Up next** is the backlog: everything you *could* start tonight, ordered by
+how much you have already put in.
+
+| Section | What's in it |
+|---|---|
+| **Paused** | Marked *On hold* — shows where you stopped, and how long ago |
+| **Ready to start** | Marked *Plan to watch*, and already out |
+| **Continue the series** | Not in your library, but follows something you finished |
+
+Nothing appears in two sections at once, and **a franchise gets one row**, not
+one per season. If four parts of Bleach are all waiting, the row names the one
+to watch next and the count tells you the rest are there.
+
+Films, OVAs and alternative versions are not folded in — those are separate
+things to decide about, so they keep their own rows and their own numbers.
+
+Every row carries the same three numbers, so you never have to open a series
+page to work out where you stand:
+
+```
+BLEACH: Thousand-Year Blood War
+13 episodes · 2022
+▓▓▓▓▓▓▓▓▓░░  366/416
+1 of 5 watched · 366/416 eps · 4 ready
+```
+
+Read it as: five entries in this franchise, you have finished one of them,
+that is 366 episodes of 416, and four are out and waiting.
+
+- **4 of 8 watched** — seasons, films and OVAs on the main line
+- **59/115 eps** — the same thing in episodes, which is the honest version:
+  "1 of 2 entries" of One Piece is nowhere near half of One Piece
+- **4 ready** — entries that have aired and you haven't finished
+
+If a season hasn't been announced yet, the total is shown as **?** rather than
+guessed. A confident wrong number is worse than an admitted gap.
+
+Anything you planned that **isn't out yet** is not listed here — it's on
+**Waiting**, and the foot of the page says how many and links there.
+
+> Marking something *Plan to watch* used to make it vanish: it dropped off
+> Today (which only shows sequels you haven't acknowledged) and the library
+> had no way to filter for it. Recording your intent hid the thing. This page
+> is where it goes instead.
+
+---
+
+## Flow 7 — Waiting for the next season
 
 **Waiting** has two halves:
 
@@ -172,6 +222,23 @@ Expected dates show exactly what's known. If no date has been announced it says
 You're only shown as "waiting" on a season that *directly follows* something
 you finished. If you've finished Season 1 and Season 2 is already out, the app
 tells you to watch Season 2 rather than claiming you're waiting on Season 3.
+
+---
+
+## Finding things in the library
+
+The **Library** filters by status and sorts:
+
+- **All / Watching / Planned / On hold / Completed / Dropped** — only the
+  filters that would actually return something are offered
+- **Recent** (default), **Most left to watch**, **Title**
+
+*Most left to watch* leads with how many aired entries you haven't finished,
+then by episodes outstanding — so a franchise with four seasons sitting ready
+beats one with a single episode left.
+
+Both live in the URL (`/library?status=planned&sort=left`), so a filtered
+library is linkable, and the counters on **Today** point straight at them.
 
 ---
 
