@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    # The suite is mostly integration tests against a real Postgres, because
+    # the guarantees that matter — row-level security, the sync merge rules —
+    # cannot be meaningfully mocked. The whole point is that the DATABASE
+    # refuses.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: animemind
+          POSTGRES_PASSWORD: animemind
+          POSTGRES_DB: animemind
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U animemind"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # Note the ports: CI exposes Postgres on 5432 while the local stack uses
+      # 55432 to avoid colliding with other projects. Everything derives from
+      # these two URLs so neither environment hardcodes the other's.
+      DATABASE_URL: postgres://animemind_app:animemind_app@localhost:5432/animemind_test
+      DATABASE_MIGRATION_URL: postgres://animemind:animemind@localhost:5432/animemind_test
+      AUTH_SECRET: ci-only-signing-key-not-used-anywhere-else-0123456789
+      CRON_SECRET: ci-only-cron-secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.6.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
