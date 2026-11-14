@@ -178,6 +178,32 @@ export async function mergeWorks(keeperId: string, loserId: string): Promise<str
       .set({ workId: keeperId })
       .where(eq(workExternalId.workId, loserId));
 
+    /**
+     * The keeper must answer to the LOSER's own id from now on.
+     *
+     * Without this the merge undoes itself. `resolveWorkId` falls back to the
+     * external-id table precisely because the surviving row no longer carries
+     * the other provider's number — so if nothing claims it, the next crawl
+     * or search that looks that id up finds nothing, inserts a fresh row, and
+     * the duplicate is back. Observed exactly that way: two Attack on Titan
+     * rows merged, and a background relation walk thirty-eight minutes later
+     * recreated one of them.
+     *
+     * The UPDATE above moves a claim the loser already held, which covers
+     * rows ingested since claiming became automatic. This covers the rest,
+     * and makes the guarantee belong to the merge rather than depending on
+     * something else having run first.
+     */
+    await tx.execute(sql`
+      INSERT INTO work_external_id (site, external_id, work_id)
+      SELECT CASE WHEN l.provider = 'kitsu' THEN 'kitsu' ELSE 'myanimelist' END,
+             l.provider_id,
+             ${keeperId}::uuid
+        FROM work l
+       WHERE l.id = ${loserId}::uuid
+      ON CONFLICT (site, external_id) DO UPDATE SET work_id = ${keeperId}::uuid
+    `);
+
     // ── fill any gaps on the keeper from the loser ──
     await tx.execute(sql`
       UPDATE work k SET
@@ -277,6 +303,17 @@ export async function findDuplicatePairs(): Promise<
        AND a.created_at < b.created_at
        AND a.kind = b.kind
        AND coalesce(a.episode_count, -1) = coalesce(b.episode_count, -1)
+       -- When both know when they aired, they must agree. Two providers'
+       -- rows for one anime share a year; two SEASONS of one anime do not.
+       -- Saekano is the live near-miss: "Saenai Heroine no Sodatekata" and
+       -- "Saenai Heroine no Sodatekata ♭" are season 1 and season 2, and the
+       -- ♭ is punctuation as far as the normaliser is concerned, so the two
+       -- titles come out identical. Only their lengths (12 and 11) tell them
+       -- apart, and lengths do coincide. The year is the second lock.
+       AND (
+            a.start_date IS NULL OR b.start_date IS NULL
+         OR date_part('year', a.start_date) = date_part('year', b.start_date)
+       )
        AND (
             (${norm('a.title_romaji')} <> '' AND ${norm('a.title_romaji')} = ${norm('b.title_romaji')})
          OR (${norm('a.title_english')} <> '' AND ${norm('a.title_english')} = ${norm('b.title_english')})

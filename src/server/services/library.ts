@@ -340,11 +340,42 @@ export async function listLibrarySeries(
 
   // Which series each owned work belongs to.
   const membership = await db
-    .select({ workId: seriesMember.workId, seriesId: seriesMember.seriesId })
+    .select({
+      workId: seriesMember.workId,
+      seriesId: seriesMember.seriesId,
+      spineOrd: seriesMember.spineOrd,
+    })
     .from(seriesMember)
     .where(inArray(seriesMember.workId, owned.map((o) => o.w.id)));
   const seriesIds = [...new Set(membership.map((m) => m.seriesId))];
   if (!seriesIds.length) return [];
+
+  /**
+   * One owned work belongs to ONE card.
+   *
+   * A work can be a member of several series. Fullmetal Alchemist (2003) and
+   * Brotherhood each head their own and each appear in the other's as an
+   * alternative version, along with the films and OVAs the two share. Counting
+   * a work on every card it appears on meant both Fullmetal cards claimed
+   * both adaptations — "47 entries" for a library of 45 — and, worse, someone
+   * who owned only a shared film would have been shown the same film as two
+   * separate library cards.
+   *
+   * Home is the series whose MAIN LINE the work sits on, since that is the
+   * story it belongs to. A work on no spine anywhere is an extra everywhere,
+   * and no series has a better claim than another, so the lowest series id
+   * wins — arbitrary, but stable, which is what stops a card appearing and
+   * disappearing between page loads.
+   */
+  const ordered = [...membership].sort((a, b) => (a.seriesId < b.seriesId ? -1 : 1));
+  const homeByWork = new Map<string, string>();
+  for (const m of ordered) {
+    if (m.spineOrd === null || homeByWork.has(m.workId)) continue;
+    homeByWork.set(m.workId, m.seriesId);
+  }
+  for (const m of ordered) {
+    if (!homeByWork.has(m.workId)) homeByWork.set(m.workId, m.seriesId);
+  }
 
   const [seriesRows, allMembers] = await Promise.all([
     db.select().from(series).where(inArray(series.id, seriesIds)),
@@ -366,7 +397,10 @@ export async function listLibrarySeries(
 
     const mine = members
       .map((m) => ownedByWork.get(m.w.id))
-      .filter((x): x is (typeof owned)[number] => Boolean(x));
+      .filter((x): x is (typeof owned)[number] => Boolean(x))
+      // Counted on its home card only, so nothing is counted twice and no
+      // work produces two cards.
+      .filter((o) => homeByWork.get(o.w.id) === s.id);
     if (!mine.length) continue;
 
     const states = mine.map((m) => m.uw);

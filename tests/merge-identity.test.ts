@@ -18,7 +18,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { and, eq, inArray } from 'drizzle-orm';
 import { asUser, unscoped } from '@/server/db/client';
 import { account, userWork, work } from '@/server/db/schema';
-import { findDuplicatePairs, mergeWorks } from '@/server/services/identity';
+import { findDuplicatePairs, mergeWorks, resolveWorkId } from '@/server/services/identity';
+import { upsertWork } from '@/server/services/ingest';
 
 const TAG = `merge-${Date.now()}`;
 const db = () => unscoped();
@@ -33,6 +34,7 @@ async function makeWork(opts: {
   provider?: 'jikan' | 'kitsu';
   episodeCount?: number | null;
   kind?: 'tv' | 'movie';
+  startDate?: string;
 }) {
   const [row] = await db()
     .insert(work)
@@ -43,6 +45,7 @@ async function makeWork(opts: {
       titleRomaji: opts.romaji,
       titleEnglish: opts.english ?? null,
       episodeCount: opts.episodeCount === undefined ? 12 : opts.episodeCount,
+      startDate: opts.startDate ?? null,
       releaseStatus: 'finished',
       contentHash: `h-${TAG}-${opts.tag}`,
     })
@@ -204,10 +207,170 @@ describe('findDuplicatePairs', () => {
     expect(pairs.some((p) => p.keeper === a && p.loser === b)).toBe(false);
   });
 
+  it('refuses two seasons whose titles differ only by a symbol', async () => {
+    // The live near-miss. The normaliser strips the ♭, so season 2 comes out
+    // identical to season 1 — and lengths, the only other guard, do coincide
+    // in real catalogs. Merging these would fold a whole season of watch
+    // history into the one before it.
+    const a = await makeWork({
+      tag: 'y1',
+      romaji: `Saenai Heroine no Sodatekata ${TAG}`,
+      provider: 'jikan',
+      episodeCount: 12,
+      startDate: '2015-01-09',
+    });
+    const b = await makeWork({
+      tag: 'y2',
+      romaji: `Saenai Heroine no Sodatekata ♭ ${TAG}`,
+      provider: 'kitsu',
+      episodeCount: 12,
+      startDate: '2017-04-07',
+    });
+
+    const pairs = await findDuplicatePairs();
+    expect(pairs.some((p) => p.keeper === a && p.loser === b)).toBe(false);
+  });
+
+  it('still pairs one anime whose two rows agree on the year', async () => {
+    const a = await makeWork({
+      tag: 'y3',
+      romaji: `Kimi no Shiranai ${TAG}`,
+      provider: 'jikan',
+      episodeCount: 13,
+      startDate: '2019-04-06',
+    });
+    const b = await makeWork({
+      tag: 'y4',
+      romaji: `Kimi no Shiranai ${TAG}`,
+      provider: 'kitsu',
+      episodeCount: 13,
+      // Providers disagree about the exact day; the year is what must match.
+      startDate: '2019-04-07',
+    });
+
+    const pairs = await findDuplicatePairs();
+    expect(pairs.some((p) => p.keeper === a && p.loser === b)).toBe(true);
+  });
+
   it('never pairs two rows from the same provider', async () => {
     const a = await makeWork({ tag: 's1', romaji: `Same Provider ${TAG}`, provider: 'kitsu' });
     const b = await makeWork({ tag: 's2', romaji: `Same Provider ${TAG}`, provider: 'kitsu' });
     const pairs = await findDuplicatePairs();
     expect(pairs.some((p) => p.keeper === a && p.loser === b)).toBe(false);
+  });
+});
+
+/**
+ * A merge that does not survive the next crawl is not a merge.
+ *
+ * `resolveWorkId` falls back to the external-id table precisely because the
+ * surviving row no longer carries the other provider's number. If nothing
+ * claims that number, the next lookup finds nothing, inserts a fresh row, and
+ * the duplicate is back — observed in the live catalog, where two Attack on
+ * Titan rows were merged and a background relation walk recreated one of them
+ * thirty-eight minutes later.
+ */
+describe('a merge stays merged', () => {
+  it('makes the keeper answer to the loser\u2019s id', async () => {
+    const keeper = await makeWork({ tag: 'r1', romaji: `Resolve Me ${TAG}` });
+    const loser = await makeWork({
+      tag: 'r2',
+      romaji: `Resolve Me ${TAG}`,
+      provider: 'jikan',
+    });
+
+    await mergeWorks(keeper, loser);
+
+    // The id the losing row was known by must now lead to the survivor.
+    expect(await resolveWorkId('jikan', `${TAG}-r2`)).toBe(keeper);
+  });
+
+  it('does not let the next ingest recreate the row it just absorbed', async () => {
+    const keeper = await makeWork({ tag: 'r3', romaji: `Re-ingest ${TAG}` });
+    const loser = await makeWork({
+      tag: 'r4',
+      romaji: `Re-ingest ${TAG}`,
+      provider: 'jikan',
+    });
+    await mergeWorks(keeper, loser);
+
+    // Exactly what a relation walk does when it meets that id again.
+    const again = await upsertWork(
+      {
+        providerId: `${TAG}-r4`,
+        kind: 'tv',
+        titleRomaji: `Re-ingest ${TAG}`,
+        titleEnglish: null,
+        titleNative: null,
+        synonyms: [],
+        synopsis: null,
+        coverUrl: null,
+        bannerUrl: null,
+        episodeCount: 12,
+        durationMin: null,
+        releaseStatus: 'finished',
+        startDate: null,
+        endDate: null,
+        seasonYear: null,
+        broadcastDow: null,
+        broadcastTime: null,
+        broadcastTz: null,
+        genres: [],
+        studios: [],
+        score: null,
+        popularity: null,
+        raw: {},
+      },
+      'jikan',
+    );
+
+    expect(again.id).toBe(keeper);
+
+    const rows = await db()
+      .select({ id: work.id })
+      .from(work)
+      .where(inArray(work.providerId, [`${TAG}-r3`, `${TAG}-r4`]));
+    expect(rows).toHaveLength(1);
+  });
+
+  it('keeps the surviving row\u2019s own provenance when another provider refreshes it', async () => {
+    const keeper = await makeWork({ tag: 'r5', romaji: `Stable Id ${TAG}`, provider: 'kitsu' });
+    const loser = await makeWork({ tag: 'r6', romaji: `Stable Id ${TAG}`, provider: 'jikan' });
+    await mergeWorks(keeper, loser);
+
+    await upsertWork(
+      {
+        providerId: `${TAG}-r6`,
+        kind: 'tv',
+        titleRomaji: `Stable Id ${TAG}`,
+        titleEnglish: 'Refreshed',
+        titleNative: null,
+        synonyms: [],
+        synopsis: null,
+        coverUrl: null,
+        bannerUrl: null,
+        episodeCount: 12,
+        durationMin: null,
+        releaseStatus: 'finished',
+        startDate: null,
+        endDate: null,
+        seasonYear: null,
+        broadcastDow: null,
+        broadcastTime: null,
+        broadcastTz: null,
+        genres: [],
+        studios: [],
+        score: null,
+        popularity: null,
+        raw: {},
+      },
+      'jikan',
+    );
+
+    const row = await db().query.work.findFirst({ where: eq(work.id, keeper) });
+    // The data refreshed; the identity did not move to the other provider.
+    expect(row!.titleEnglish).toBe('Refreshed');
+    expect(row!.provider).toBe('kitsu');
+    expect(row!.providerId).toBe(`${TAG}-r5`);
   });
 });

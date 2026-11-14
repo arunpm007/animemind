@@ -210,6 +210,23 @@ Three things have to hold, and for a long time none of them did:
 3. **The lookup must actually run.** Tracked by `work.identity_checked_at`, not
    by whether the row holds an external id — every row holds one of those now,
    so that test would always pass and the lookup would never happen.
+4. **A merge must claim the id it absorbed.** `resolveWorkId` falls back to the
+   external-id table precisely because the survivor no longer carries the other
+   provider's number. If nothing claims it, the next crawl that meets that id
+   finds nothing, inserts a fresh row, and the merge is undone. This was
+   measured: six Attack on Titan rows were merged and a background relation
+   walk recreated one of them thirty-eight minutes later.
+
+And a merged row answers to two providers' numbers, so **a refresh updates the
+data but never `(provider, provider_id)`** — otherwise the row's provenance
+flips to whichever provider last touched it, and `siteForProvider` files its
+next claim in the wrong id space.
+
+One owned work also belongs to exactly one library card. A work can be a member
+of several series (Fullmetal Alchemist and Brotherhood each head their own and
+each appear in the other's), and counting it on every card it appears in made a
+45-title library report 47 entries. Its home is the series whose main line it
+sits on.
 
 `pnpm dedupe:works` repairs the backlog (dry run by default). The matcher
 requires different providers, same medium, same episode count, and a title that

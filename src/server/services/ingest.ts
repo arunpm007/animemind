@@ -228,7 +228,21 @@ export async function upsertWork(
     }
   }
 
-  await db.update(work).set(next).where(eq(work.id, existing.id));
+  /**
+   * Refresh the data, never the identity.
+   *
+   * `next` carries `provider` and `providerId`, and this row may have been
+   * resolved through the external-id table rather than by a direct match —
+   * which is exactly what happens to a merged row, since it answers to both
+   * providers' numbers. Writing them back would flip the row's provenance to
+   * whichever provider last refreshed it, so `siteForProvider` would then
+   * file its next claim in the wrong id space. A row's (provider, providerId)
+   * is what it IS; everything else is what it currently looks like.
+   */
+  const refreshable = { ...next };
+  delete (refreshable as Partial<typeof next>).provider;
+  delete (refreshable as Partial<typeof next>).providerId;
+  await db.update(work).set(refreshable).where(eq(work.id, existing.id));
 
   if (events.length) {
     await db

@@ -16,6 +16,9 @@ import type { Actor } from '@/server/http/api';
 
 const TAG = `group-${Date.now()}`;
 const ids: string[] = [];
+/** Two retellings that share their films, as Fullmetal Alchemist does. */
+const twin: string[] = [];
+let sharedFilm = '';
 let actor: Actor;
 let userId = '';
 
@@ -54,6 +57,58 @@ beforeAll(async () => {
   }
   await recomputeSeries(ids[0]);
 
+  // Two works that each head their own series and each appear in the other's
+  // as an alternative version, plus one film that belongs to both.
+  for (const [tag, title, eps] of [
+    ['tw1', `Twin Tale ${TAG}`, 51],
+    ['tw2', `Twin Tale: Retold ${TAG}`, 64],
+  ] as const) {
+    const [row] = await db
+      .insert(work)
+      .values({
+        provider: 'kitsu',
+        providerId: `${TAG}-${tag}`,
+        kind: 'tv',
+        titleRomaji: title,
+        titleEnglish: title,
+        episodeCount: eps,
+        releaseStatus: 'finished',
+        contentHash: `h-${TAG}-${tag}`,
+      })
+      .returning({ id: work.id });
+    twin.push(row.id);
+    ids.push(row.id);
+  }
+  const [film] = await db
+    .insert(work)
+    .values({
+      provider: 'kitsu',
+      providerId: `${TAG}-twfilm`,
+      kind: 'movie',
+      titleRomaji: `Twin Tale: The Film ${TAG}`,
+      titleEnglish: `Twin Tale: The Film ${TAG}`,
+      episodeCount: 1,
+      releaseStatus: 'finished',
+      contentHash: `h-${TAG}-twfilm`,
+    })
+    .returning({ id: work.id });
+  sharedFilm = film.id;
+  ids.push(film.id);
+
+  await db
+    .insert(workRelation)
+    .values([
+      { fromWorkId: twin[0], toWorkId: twin[1], kind: 'alternative_version' },
+      { fromWorkId: twin[1], toWorkId: twin[0], kind: 'alternative_version' },
+      { fromWorkId: twin[0], toWorkId: sharedFilm, kind: 'side_story' },
+      { fromWorkId: sharedFilm, toWorkId: twin[0], kind: 'parent_story' },
+      { fromWorkId: twin[1], toWorkId: sharedFilm, kind: 'side_story' },
+      { fromWorkId: sharedFilm, toWorkId: twin[1], kind: 'parent_story' },
+    ])
+    .onConflictDoNothing();
+  await recomputeSeries(twin[0]);
+  await recomputeSeries(twin[1]);
+
   const [a] = await db
     .insert(account)
     .values({ email: `${TAG}@test.local`, passwordHash: 'x' })
@@ -73,6 +128,10 @@ beforeAll(async () => {
         progress: 5,
         lastWatchedAt: new Date(),
       },
+      // Both retellings, and the film the two series share.
+      { userId: a.id, workId: twin[0], status: 'planned', progress: 0 },
+      { userId: a.id, workId: twin[1], status: 'planned', progress: 0 },
+      { userId: a.id, workId: sharedFilm, status: 'planned', progress: 0 },
     ]);
   });
 });
@@ -80,8 +139,12 @@ beforeAll(async () => {
 afterAll(async () => {
   const db = unscoped();
   if (userId) await db.delete(account).where(eq(account.id, userId));
-  const s = await db.query.series.findFirst({ where: eq(series.rootWorkId, ids[0]) });
-  if (s) await db.delete(series).where(eq(series.id, s.id));
+  const roots = await db.query.series.findMany({
+    where: inArray(series.rootWorkId, [ids[0], twin[0], twin[1], sharedFilm].filter(Boolean)),
+  });
+  if (roots.length) {
+    await db.delete(series).where(inArray(series.id, roots.map((r) => r.id)));
+  }
   await db.delete(work).where(inArray(work.id, ids));
 });
 
@@ -137,5 +200,49 @@ describe('listLibrarySeries', () => {
     expect(row.missingEntries).toHaveLength(1);
     expect(row.missingEntries[0].title).toBe('Grouping Test S4');
     expect(row.missingEntries[0].ord).toBe(4);
+  });
+});
+
+/**
+ * A work can be a member of several series, and must be counted by one.
+ *
+ * Fullmetal Alchemist (2003) and Brotherhood each head their own series and
+ * each appear in the other's as an alternative version, along with the films
+ * and OVAs the two share. Counting an owned work on every card it appears on
+ * made both Fullmetal cards claim both adaptations — a 45-title library
+ * reporting 47 entries — and someone who owned only a shared film was shown
+ * that one film as two separate library cards.
+ */
+describe('works shared between two series', () => {
+  it('counts every owned work exactly once across all cards', async () => {
+    const rows = await listLibrarySeries(actor);
+    const counted = rows.reduce((n, r) => n + r.ownedEntries, 0);
+    // Six owned works: three of the franchise, two retellings, one film.
+    expect(counted).toBe(6);
+  });
+
+  it('gives each retelling its own card, with only its own entries', async () => {
+    const rows = await listLibrarySeries(actor);
+    const original = rows.find((r) => r.title === `Twin Tale ${TAG}`);
+    const retold = rows.find((r) => r.title === `Twin Tale: Retold ${TAG}`);
+    expect(original).toBeDefined();
+    expect(retold).toBeDefined();
+    // Three owned works between them — one retelling each, plus the film,
+    // which has to land on exactly one of the two. Four would mean a card is
+    // claiming the other's retelling.
+    expect(original!.ownedEntries + retold!.ownedEntries).toBe(3);
+    // And each reports its OWN length, not the other's.
+    expect(original!.episodesTotal).toBe(51);
+    expect(retold!.episodesTotal).toBe(64);
+  });
+
+  it('never shows one shared film as two cards', async () => {
+    const rows = await listLibrarySeries(actor);
+    const claiming = rows.filter((r) => r.missingEntries.length >= 0 && r.ownedEntries > 0);
+    // The film belongs to both series; exactly one of them may count it.
+    const withFilm = claiming.filter((r) =>
+      [`Twin Tale ${TAG}`, `Twin Tale: Retold ${TAG}`].includes(r.title),
+    );
+    expect(withFilm.reduce((n, r) => n + r.ownedEntries, 0)).toBe(3);
   });
 });
