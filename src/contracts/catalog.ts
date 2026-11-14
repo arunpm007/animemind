@@ -69,6 +69,14 @@ export type UserProgress = z.infer<typeof userProgress>;
 export const libraryEntry = z.object({
   work: workSummary,
   progress: userProgress,
+  /**
+   * Where to navigate when this entry is clicked. Null only while the series
+   * is still being derived in the background, just after the title was added.
+   *
+   * Its absence was why library posters did nothing at all: there was no
+   * destination to link to, so none was rendered.
+   */
+  seriesSlug: z.string().nullable(),
 });
 export type LibraryEntry = z.infer<typeof libraryEntry>;
 

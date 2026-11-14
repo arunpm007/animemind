@@ -16,6 +16,9 @@ comes next, whether it's out yet — the app works out for you.
 | **Waiting** | "What am I waiting on?" |
 | **Series** | "Where am I in *this* show, and what's next?" |
 
+Anything in your library is clickable — a poster takes you to its series page,
+where every season, film and OVA is listed and editable.
+
 Plus **search**, on `⌘K` (or `Ctrl+K`, or just `/`), from anywhere.
 
 ---
@@ -30,16 +33,31 @@ This is the flow the app exists for.
                    ┌────────┴────────┐
                    ▼                 ▼
           ✓ In your library       + Add
-          (you've seen it —      (new to you)
-           question answered)
+          (you've seen it —          │
+           question answered)        ▼
+                            ┌──────────────────────┐
+                            │ Where are you with   │
+                            │ this?                │
+                            │  ○ Plan to watch     │
+                            │  ○ Currently watching│
+                            │      → which episode │
+                            │  ○ Already watched   │
+                            │  ○ On hold / Dropped │
+                            └──────────────────────┘
 ```
 
 **`✓ In your library` is the point.** You searched because you couldn't
 remember whether you'd seen it. The answer is right there in the results list,
 before you click anything.
 
-Adding puts the title in as **Planned**. It does not guess that you've watched
-it — you tell it that next.
+**Adding asks where you are**, rather than assuming. Choosing *Currently
+watching* asks which episode; *Already watched* fills the whole thing in. This
+is the "tell it once" moment — say you've seen three seasons here and you never
+have to correct it later.
+
+Other seasons, films and OVAs appear on the **series page** a few seconds after
+you add — the app works out the rest of the franchise in the background. You
+set where you are with each of them there.
 
 > **Keyboard:** `↑` `↓` to move, `↵` to add the highlighted result, `esc` to
 > close.
@@ -100,9 +118,31 @@ condition, not an empty state.
 
 ---
 
-## Flow 4 — Rewatching
+## Flow 4 — Changing anything
 
-On a completed series, **Watch again** starts a rewatch.
+Every title in your library has a **status chip** on the series page — it reads
+*Watching*, *Completed*, *Planned* and so on. Click it for everything you can
+change:
+
+```
+EPISODE      14/24  ✎  jump to…     ← type any episode number
+STATUS       ● Watching
+             Completed
+             Plan to watch
+             On hold
+             Dropped
+─────────────────────────────
+↻ Watch again                       ← on completed titles
+☆ Add to favourites
+🗑 Remove from library
+```
+
+Setting the episode to the last one marks it **Completed** automatically —
+there's no need to do both.
+
+## Flow 5 — Rewatching
+
+On a completed title, the status chip offers **Watch again**.
 
 The important behaviour: **your completed count does not drop.** The title
 stays Completed and starts tracking a second pass alongside it. Rewatching
@@ -119,7 +159,7 @@ shows **↻ watched 2×**.
 
 ---
 
-## Flow 5 — Waiting for the next season
+## Flow 6 — Waiting for the next season
 
 **Waiting** has two halves:
 

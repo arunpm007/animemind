@@ -31,6 +31,7 @@ export default async function LibraryPage() {
               <PosterCard
                 key={e.work.id}
                 work={e.work}
+                href={e.seriesSlug ? `/series/${e.seriesSlug}` : undefined}
                 priority={i < 12}
                 footer={
                   <ProgressBar

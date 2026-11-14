@@ -32,7 +32,26 @@ export function EpisodeStepper({
   total: number | null;
   pass: number;
 }) {
-  const [value, setValue] = useState(progress);
+  // An OPTIMISTIC overlay on the server value, not a copy of it.
+  //
+  // Seeding useState from a prop looks equivalent but is not: useState ignores
+  // the prop on every later render, so any change made elsewhere — the status
+  // menu marking this complete, or another device syncing — left the button
+  // showing a stale number. Marking a title Completed still read "+ Ep 1".
+  //
+  // Clearing the overlay during render when the prop moves is React's
+  // documented way to adjust state on prop change; an effect would cost an
+  // extra render and is what the lint rules reject.
+  const [optimistic, setOptimistic] = useState<number | null>(null);
+  const [seenProgress, setSeenProgress] = useState(progress);
+  if (seenProgress !== progress) {
+    setSeenProgress(progress);
+    setOptimistic(null);
+  }
+
+  const value = optimistic ?? progress;
+  const setValue = setOptimistic;
+
   const [failed, setFailed] = useState(false);
   const [, startTransition] = useTransition();
   const router = useRouter();

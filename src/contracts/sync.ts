@@ -91,6 +91,22 @@ export const syncOp = z.discriminatedUnion('t', [
 ]);
 export type SyncOp = z.infer<typeof syncOp>;
 
+/**
+ * An op without the envelope fields, so a caller can write
+ * `{ t: 'complete', workId, pass }` and let the transport add id/clientTs/
+ * deviceId.
+ *
+ * Distributive on purpose: a plain `Omit<SyncOp, ...>` collapses the
+ * discriminated union into one object type whose members are all optional,
+ * which silently accepts `{ t: 'complete', value: 3 }`.
+ */
+export type SyncOpBody =
+  SyncOp extends infer T
+    ? T extends SyncOp
+      ? Omit<T, 'id' | 'clientTs' | 'deviceId'>
+      : never
+    : never;
+
 export const syncRequest = z.object({
   /** Omit on a first sync to receive a full snapshot. */
   cursor: z.string().nullable().optional(),

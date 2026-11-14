@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { AlertCircle, Play, RotateCcw } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { AddButton } from '@/components/anime/AddButton';
+import { StatusControl } from '@/components/anime/StatusControl';
 import { EpisodeStepper } from '@/components/anime/EpisodeStepper';
 import { Poster, ProgressBar, Section, StatusDot } from '@/components/ui/primitives';
 import type { ExtraEntry, TrackDto } from '@/contracts';
@@ -236,12 +237,24 @@ export default async function SeriesPage({
                         </div>
 
                         {unaired ? null : p ? (
-                          <EpisodeStepper
-                            workId={entry.work.id}
-                            progress={p.progress}
-                            total={entry.work.episodeCount}
-                            pass={p.rewatchCount + 1 + (p.rewatching ? 1 : 0)}
-                          />
+                          <div className="flex shrink-0 items-center gap-2">
+                            <StatusControl
+                              workId={entry.work.id}
+                              status={p.status}
+                              progress={p.progress}
+                              total={entry.work.episodeCount}
+                              rewatching={p.rewatching}
+                              rewatchCount={p.rewatchCount}
+                              favorite={p.favorite}
+                              rating={p.rating}
+                            />
+                            <EpisodeStepper
+                              workId={entry.work.id}
+                              progress={p.progress}
+                              total={entry.work.episodeCount}
+                              pass={p.rewatchCount + 1 + (p.rewatching ? 1 : 0)}
+                            />
+                          </div>
                         ) : (
                           // Not in the library yet — this is the control that
                           // lets "next season" actually be started.

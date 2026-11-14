@@ -69,6 +69,10 @@ export function toUserProgress(u: UserWorkRow): UserProgress {
   };
 }
 
-export function toLibraryEntry(w: WorkRow, u: UserWorkRow): LibraryEntry {
-  return { work: toWorkSummary(w), progress: toUserProgress(u) };
+export function toLibraryEntry(
+  w: WorkRow,
+  u: UserWorkRow,
+  seriesSlug: string | null = null,
+): LibraryEntry {
+  return { work: toWorkSummary(w), progress: toUserProgress(u), seriesSlug };
 }

@@ -33,6 +33,7 @@ export default async function WatchingPage() {
               <PosterCard
                 key={e.work.id}
                 work={e.work}
+                href={e.seriesSlug ? `/series/${e.seriesSlug}` : undefined}
                 footer={
                   <div className="flex flex-col gap-1">
                     <ProgressBar value={e.progress.progress} total={e.work.episodeCount} />

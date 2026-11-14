@@ -1,11 +1,11 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, Loader2, Plus, Search } from 'lucide-react';
 import type { SearchResult } from '@/contracts';
 import { api, ApiRequestError } from '@/lib/api';
 import { cn } from '@/lib/cn';
+import { AddSheet } from '@/components/anime/AddSheet';
 import { PosterImage } from '@/components/ui/PosterImage';
 import { StatusDot } from '@/components/ui/primitives';
 
@@ -28,12 +28,11 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [degraded, setDegraded] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [sheetFor, setSheetFor] = useState<SearchResult | null>(null);
   const [cursor, setCursor] = useState(0);
   const [added, setAdded] = useState<Set<string>>(new Set());
-  const [, startTransition] = useTransition();
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
   const seq = useRef(0);
 
   useEffect(() => {
@@ -81,32 +80,14 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
     return () => clearTimeout(timer);
   }, [q]);
 
-  const add = useCallback(
-    async (r: SearchResult) => {
-      setAdded((prev) => new Set(prev).add(r.id));
-      setAddError(null);
-      try {
-        // r.id is our internal work id — no provider round-trip needed.
-        await api.post('/library', { workId: r.id, status: 'planned' });
-        startTransition(() => router.refresh());
-      } catch (err) {
-        // Roll back AND say so. Silently reverting the tick leaves the user
-        // watching a row flip back with no explanation, which reads as the
-        // app losing their input rather than a request that failed.
-        setAdded((prev) => {
-          const next = new Set(prev);
-          next.delete(r.id);
-          return next;
-        });
-        setAddError(
-          err instanceof ApiRequestError
-            ? `Could not add ${r.title}: ${err.payload.message}`
-            : `Could not add ${r.title}. Check your connection.`,
-        );
-      }
-    },
-    [router],
-  );
+  // Opening the sheet, not adding. One click used to file everything as
+  // "plan to watch", which is the wrong answer for anything you have already
+  // seen — and correcting it afterwards, per title, is exactly the work this
+  // product exists to remove.
+  const add = useCallback((r: SearchResult) => {
+    setAddError(null);
+    setSheetFor(r);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -121,7 +102,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
       }
       if (e.key === 'Enter' && results[cursor]) {
         e.preventDefault();
-        void add(results[cursor]);
+        add(results[cursor]);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -245,7 +226,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => void add(r)}
+                    onClick={() => add(r)}
                     className="flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--color-accent)] px-3 py-1.5 text-[11px] font-medium text-white transition-transform duration-[160ms] ease-[var(--ease-state)] active:scale-95"
                   >
                     <Plus className="size-3" />
@@ -265,6 +246,14 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
           </div>
         ) : null}
       </div>
+
+      {sheetFor ? (
+        <AddSheet
+          result={sheetFor}
+          onClose={() => setSheetFor(null)}
+          onAdded={(workId) => setAdded((prev) => new Set(prev).add(workId))}
+        />
+      ) : null}
     </div>
   );
 }

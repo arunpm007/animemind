@@ -211,7 +211,8 @@ export async function addToLibrary(
     // their row back now; the series page becomes available moments later.
     scheduleHydration(workId);
 
-    return toLibraryEntry(row.w, row.uw);
+    const slugs = await seriesSlugsFor(tx, [workId]);
+    return toLibraryEntry(row.w, row.uw, slugs.get(workId) ?? null);
   });
 }
 
@@ -233,8 +234,30 @@ export async function listLibrary(
       )
       .orderBy(desc(userWork.lastWatchedAt), desc(userWork.updatedSeq));
 
-    return rows.map((r) => toLibraryEntry(r.w, r.uw));
+    // Resolve each entry's series so the UI has somewhere to navigate. A
+    // separate query rather than a join: a work can belong to one series, but
+    // the join multiplies rows if that ever stops being true.
+    const slugs = await seriesSlugsFor(
+      tx,
+      rows.map((r) => r.w.id),
+    );
+
+    return rows.map((r) => toLibraryEntry(r.w, r.uw, slugs.get(r.w.id) ?? null));
   });
+}
+
+/** workId -> series slug, for linking a library entry to its series page. */
+async function seriesSlugsFor(
+  tx: Parameters<Parameters<typeof asUser>[1]>[0],
+  workIds: string[],
+): Promise<Map<string, string>> {
+  if (!workIds.length) return new Map();
+  const rows = await tx
+    .select({ workId: seriesMember.workId, slug: series.slug })
+    .from(seriesMember)
+    .innerJoin(series, eq(series.id, seriesMember.seriesId))
+    .where(inArray(seriesMember.workId, workIds));
+  return new Map(rows.map((r) => [r.workId, r.slug]));
 }
 
 /* ──────────────────────────────── series ──────────────────────────────── */
