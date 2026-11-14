@@ -5,6 +5,7 @@ import { Check, Loader2, Plus, Search } from 'lucide-react';
 import type { SearchResult } from '@/contracts';
 import { api, ApiRequestError } from '@/lib/api';
 import { cn } from '@/lib/cn';
+import { useDialog } from '@/lib/useDialog';
 import { AddSheet } from '@/components/anime/AddSheet';
 import { PosterImage } from '@/components/ui/PosterImage';
 import { StatusDot } from '@/components/ui/primitives';
@@ -33,6 +34,8 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
   const [added, setAdded] = useState<Set<string>>(new Set());
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialog(dialogRef);
   const seq = useRef(0);
 
   useEffect(() => {
@@ -123,7 +126,11 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
         className="fade absolute inset-0 cursor-default bg-[hsl(230_25%_2%/0.72)] backdrop-blur-sm"
       />
 
-      <div className="pane-raised rise relative w-full max-w-xl overflow-hidden rounded-2xl">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="pane-raised rise relative w-full max-w-xl overflow-hidden rounded-2xl outline-none"
+      >
         <div className="flex items-center gap-3 border-b border-[var(--color-border)] px-4">
           {loading ? (
             <Loader2 className="size-4 shrink-0 animate-spin text-[var(--color-mute)]" />
@@ -157,6 +164,16 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
             have. New titles will appear once it is back.
           </p>
         ) : null}
+
+        {/* Results arrive asynchronously; without a live region a screen
+            reader user gets no indication anything happened. */}
+        <p aria-live="polite" className="sr-only">
+          {loading
+            ? 'Searching'
+            : q.trim().length >= 2
+              ? `${results.length} result${results.length === 1 ? '' : 's'}`
+              : ''}
+        </p>
 
         <div className="max-h-[58vh] overflow-y-auto">
           {error ? (

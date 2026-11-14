@@ -7,6 +7,7 @@ import type { LibraryEntry, SearchResult, WatchStateDto } from '@/contracts';
 import { api, ApiRequestError } from '@/lib/api';
 import { makeOp } from '@/lib/op';
 import { cn } from '@/lib/cn';
+import { useDialog } from '@/lib/useDialog';
 import { PosterImage } from '@/components/ui/PosterImage';
 
 /**
@@ -77,6 +78,7 @@ export function AddSheet({
   const [, startTransition] = useTransition();
   const router = useRouter();
   const panel = useRef<HTMLDivElement>(null);
+  useDialog(panel);
 
   const total = result.episodeCount;
 
@@ -142,7 +144,8 @@ export function AddSheet({
 
       <div
         ref={panel}
-        className="pane-raised rise relative w-full max-w-[420px] overflow-hidden rounded-2xl"
+        tabIndex={-1}
+        className="pane-raised rise relative w-full max-w-[420px] overflow-hidden rounded-2xl outline-none"
       >
         {/* ── what you picked ── */}
         <div className="flex gap-3.5 border-b border-[var(--color-border)] p-4">
@@ -204,11 +207,13 @@ export function AddSheet({
           <>
             <div className="p-3">
               <p className="t-label mb-2.5 px-1.5">Where are you with this?</p>
-              <div className="flex flex-col gap-0.5">
+              <div role="radiogroup" aria-label="Where are you with this?" className="flex flex-col gap-0.5">
                 {CHOICES.map((c) => (
                   <button
                     key={c.value}
                     type="button"
+                    role="radio"
+                    aria-checked={choice === c.value}
                     onClick={() => setChoice(c.value)}
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors duration-[120ms]',

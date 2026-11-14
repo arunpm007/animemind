@@ -22,7 +22,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
   const path = usePathname();
 
   return (
-    <aside className="sticky top-0 hidden h-dvh shrink-0 flex-col gap-1 border-r border-[var(--color-border)] px-3 py-5 md:flex md:w-[208px]">
+    <aside aria-label="Main" className="sticky top-0 hidden h-dvh shrink-0 flex-col gap-1 border-r border-[var(--color-border)] px-3 py-5 md:flex md:w-[208px]">
       <Link href="/" className="mb-5 flex items-center gap-2.5 px-2">
         <span
           aria-hidden
@@ -44,13 +44,14 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
         </kbd>
       </button>
 
-      <nav className="flex flex-col gap-0.5">
+      <nav aria-label="Sections" className="flex flex-col gap-0.5">
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = href === '/' ? path === '/' : path.startsWith(href);
           return (
             <Link
               key={href}
               href={href}
+              aria-current={active ? 'page' : undefined}
               className={cn(
                 'relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors duration-[160ms] ease-[var(--ease-state)]',
                 active
@@ -95,13 +96,14 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
 export function TabBar({ onSearch }: { onSearch: () => void }) {
   const path = usePathname();
   return (
-    <nav className="pane fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around rounded-t-2xl px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
+    <nav aria-label="Sections" className="pane fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around rounded-t-2xl px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
       {NAV.map(({ href, label, icon: Icon }) => {
         const active = href === '/' ? path === '/' : path.startsWith(href);
         return (
           <Link
             key={href}
             href={href}
+            aria-current={active ? 'page' : undefined}
             className={cn(
               'flex flex-1 flex-col items-center gap-1 rounded-lg py-1.5 text-[10px] transition-colors duration-[160ms]',
               active ? 'text-[var(--color-accent)]' : 'text-[var(--color-mute)]',

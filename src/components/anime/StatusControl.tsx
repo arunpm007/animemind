@@ -7,6 +7,7 @@ import type { SyncOpBody, SyncResponse, WatchStateDto } from '@/contracts';
 import { api } from '@/lib/api';
 import { makeOp } from '@/lib/op';
 import { cn } from '@/lib/cn';
+import { useMenuKeys } from '@/lib/useDialog';
 
 /**
  * Everything you can do to a title you already have.
@@ -56,6 +57,13 @@ export function StatusControl(props: StatusControlProps) {
   const [, startTransition] = useTransition();
   const router = useRouter();
   const panel = useRef<HTMLDivElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  // role="menu" is a promise that arrow keys work. Declaring it without
+  // implementing it tells a screen-reader user how to drive the control and
+  // then ignores them, which is worse than leaving the role off.
+  useMenuKeys(menu, () => setOpen(false));
 
   // Optimistic overlays, cleared whenever the server value moves. Copying
   // props into state instead leaves every control stale the moment anything
@@ -123,10 +131,22 @@ export function StatusControl(props: StatusControlProps) {
   return (
     <div className="relative" ref={panel}>
       <button
+        ref={trigger}
         type="button"
         onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          // Opening with ArrowDown and landing on the first item is the
+          // expected behaviour for a menu button.
+          if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+            if (!open) {
+              e.preventDefault();
+              setOpen(true);
+            }
+          }
+        }}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label={`Status: ${props.rewatching ? 'Rewatching' : LABEL[props.status]}. Change status, rating or notes`}
         className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-2.5 py-1 text-[11px] text-[var(--color-dim)] transition-colors duration-[160ms] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text)]"
       >
         {busy ? <Loader2 className="size-3 animate-spin" /> : null}
@@ -142,7 +162,9 @@ export function StatusControl(props: StatusControlProps) {
 
       {open ? (
         <div
+          ref={menu}
           role="menu"
+          aria-label="Title options"
           className="pane-raised rise absolute top-full right-0 z-50 mt-1.5 w-[256px] rounded-xl p-1.5"
         >
           {/* ── status ── */}
@@ -151,7 +173,8 @@ export function StatusControl(props: StatusControlProps) {
             <button
               key={s.value}
               type="button"
-              role="menuitem"
+              role="menuitemradio"
+              aria-checked={props.status === s.value}
               disabled={busy}
               onClick={() =>
                 void send(
@@ -198,6 +221,8 @@ export function StatusControl(props: StatusControlProps) {
                   key={n}
                   type="button"
                   disabled={busy}
+                  role="menuitemradio"
+                  aria-checked={rating === n}
                   aria-label={`Rate ${n} out of 10`}
                   onClick={() => {
                     setRateOptimistic(n);
@@ -265,7 +290,8 @@ export function StatusControl(props: StatusControlProps) {
 
           <button
             type="button"
-            role="menuitem"
+            role="menuitemcheckbox"
+            aria-checked={favorite}
             disabled={busy}
             onClick={() => {
               setFavOptimistic(!favorite);
@@ -291,6 +317,9 @@ export function StatusControl(props: StatusControlProps) {
             Remove from library
           </button>
 
+          <p aria-live="polite" className="sr-only">
+            {busy ? 'Saving' : error ? error : ''}
+          </p>
           {error ? (
             <p role="alert" className="px-2.5 py-1.5 text-[11px] text-[var(--color-ended)]">
               {error}

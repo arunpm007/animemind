@@ -49,7 +49,14 @@ export function AppShell({
         {/* `relative` scopes any page-level absolute art (the series hero) to the
             content column. Without it the nearest positioned ancestor is the
             row containing the sidebar, and the art bleeds under the nav. */}
-        <main className="relative min-w-0 flex-1 pb-24 md:pb-0">{children}</main>
+        <main
+          id="content"
+          /* tabIndex -1 so the skip link can move focus here, not just scroll. */
+          tabIndex={-1}
+          className="relative min-w-0 flex-1 pb-24 outline-none md:pb-0"
+        >
+          {children}
+        </main>
       </div>
       <TabBar onSearch={() => setSearch(true)} />
       {search ? <SearchPalette onClose={() => setSearch(false)} /> : null}
