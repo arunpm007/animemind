@@ -1,5 +1,5 @@
 import { hash, verify } from '@node-rs/argon2';
-import { and, eq, isNull, lt, or } from 'drizzle-orm';
+import { and, eq, isNull, lt, ne, or } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type { AuthResult, ClientKind, SessionUser } from '@/contracts';
 import { unscoped } from '../db/client';
@@ -176,6 +176,75 @@ export async function logout(refreshToken: string): Promise<void> {
     .update(authSession)
     .set({ revokedAt: new Date() })
     .where(and(eq(authSession.familyId, row.familyId), isNull(authSession.revokedAt)));
+}
+
+/**
+ * Change a password, and sign every other device out.
+ *
+ * Revoking the other sessions is the point, not a side effect: the usual
+ * reason someone changes a password is that they think it is known, and a
+ * change that leaves existing sessions alive does not solve that. The
+ * current device keeps working so the user is not ejected from the page
+ * they are standing on.
+ */
+export async function changePassword(input: {
+  userId: string;
+  currentPassword: string;
+  newPassword: string;
+  keepSessionToken?: string;
+}): Promise<void> {
+  const db = unscoped();
+
+  const row = await db.query.account.findFirst({
+    where: eq(account.id, input.userId),
+  });
+  if (!row) throw new AuthError('invalid_credentials', 'Account not found.');
+
+  const ok = await verify(row.passwordHash, input.currentPassword, ARGON).catch(
+    () => false,
+  );
+  // Verified rather than trusted: a stolen session should not be enough to
+  // take the account over permanently.
+  if (!ok) {
+    throw new AuthError('invalid_credentials', 'That is not your current password.');
+  }
+
+  if (input.newPassword === input.currentPassword) {
+    throw new AuthError('invalid_credentials', 'That is already your password.');
+  }
+
+  const passwordHash = await hash(input.newPassword, ARGON);
+  await db.update(account).set({ passwordHash }).where(eq(account.id, input.userId));
+
+  const keepHash = input.keepSessionToken
+    ? hashRefreshToken(input.keepSessionToken)
+    : null;
+
+  await db
+    .update(authSession)
+    .set({ revokedAt: new Date() })
+    .where(
+      and(
+        eq(authSession.userId, input.userId),
+        isNull(authSession.revokedAt),
+        keepHash ? ne(authSession.tokenHash, keepHash) : undefined,
+      ),
+    );
+}
+
+/** Update the name shown in greetings. */
+export async function updateProfile(input: {
+  userId: string;
+  displayName: string | null;
+}): Promise<SessionUser> {
+  const db = unscoped();
+  const [row] = await db
+    .update(account)
+    .set({ displayName: input.displayName })
+    .where(eq(account.id, input.userId))
+    .returning();
+  if (!row) throw new AuthError('invalid_credentials', 'Account not found.');
+  return toSessionUser(row);
 }
 
 /** Housekeeping for the cron job. */

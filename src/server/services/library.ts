@@ -509,7 +509,10 @@ export async function getSeries(
     // Members are written after the series row, so an empty spine shortly
     // after an add means the walk is still running, not that the show has no
     // seasons.
-    hydrating: spineRows.length === 0 && !(descriptive?.relationsHydrated ?? false),
+    // An empty spine is never a useful thing to show. Whether the walk is
+    // still running or it finished without finding a main line, the honest
+    // message is the same: we are still working it out.
+    hydrating: spineRows.length === 0,
     ambiguous: s.ambiguous || Boolean(diagnostics.ambiguous),
     spine: spineRows.map((r) => ({
       ord: r.ord,

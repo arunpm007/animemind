@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Clock3, Compass, Library, Search, Tv } from 'lucide-react';
+import { Clock3, Compass, Library, Search, Tv, UserRound } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 /**
@@ -71,15 +71,21 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
         })}
       </nav>
 
-      <div className="mt-auto px-3">
-        <form action="/api/v1/auth/logout" method="post">
-          <button
-            type="submit"
-            className="text-xs text-[var(--color-mute)] transition-colors hover:text-[var(--color-dim)]"
-          >
-            Sign out
-          </button>
-        </form>
+      {/* Account, not a bare "Sign out" in 11px muted text — settings need a
+          home, and sign-out belongs inside it rather than loose in the nav. */}
+      <div className="mt-auto">
+        <Link
+          href="/account"
+          className={cn(
+            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors duration-[160ms]',
+            path.startsWith('/account')
+              ? 'bg-[var(--color-raised)] text-[var(--color-text)]'
+              : 'text-[var(--color-dim)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]',
+          )}
+        >
+          <UserRound className="size-4 shrink-0" />
+          Account
+        </Link>
       </div>
     </aside>
   );

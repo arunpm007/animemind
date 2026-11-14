@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
+import { FirstRun } from '@/components/FirstRun';
 import { EpisodeProgress } from '@/components/anime/EpisodeProgress';
 import { Empty, Poster, Section, StatusDot } from '@/components/ui/primitives';
 import { getDashboard } from '@/server/services/library';
@@ -22,6 +23,9 @@ export default async function TodayPage() {
   const data = await getDashboard(actor);
   const attention = data.continueWatching.length + data.newlyAvailable.length;
   const accent = data.continueWatching[0]?.work.accentHex ?? null;
+  // A brand-new account, as opposed to one that is merely caught up. The two
+  // need completely different things said to them.
+  const firstRun = data.counts.total === 0;
 
   return (
     <AppShell accent={accent}>
@@ -39,11 +43,19 @@ export default async function TodayPage() {
             {data.greetingName ? `, ${data.greetingName}` : ''}.
           </h1>
           <p className="mt-3 text-[15px] text-[var(--color-dim)]">
-            {attention === 0
-              ? 'Nothing is waiting on you.'
-              : `${attention} ${attention === 1 ? 'thing wants' : 'things want'} your attention.`}
+            {firstRun
+              ? "Let's fill this in."
+              : attention === 0
+                ? 'Nothing is waiting on you.'
+                : `${attention} ${attention === 1 ? 'thing wants' : 'things want'} your attention.`}
           </p>
         </header>
+
+        {/* An empty app that only says "nothing is waiting on you" is honest
+            and useless. A first-time visitor needs to know what to do and,
+            just as importantly, that the point only appears after a few
+            titles — otherwise one add looks like nothing happened. */}
+        {firstRun ? <FirstRun /> : null}
 
         <div className="flex flex-col gap-14">
           {/* ── the payoff of the whole series graph ── */}

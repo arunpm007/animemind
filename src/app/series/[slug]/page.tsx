@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { AlertCircle, Play, RotateCcw } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { AddButton } from '@/components/anime/AddButton';
+import { HydratingBanner } from '@/components/anime/HydratingBanner';
 import { StatusControl } from '@/components/anime/StatusControl';
 import { EpisodeProgress } from '@/components/anime/EpisodeProgress';
 import { Poster, Section, StatusDot } from '@/components/ui/primitives';
@@ -154,25 +155,16 @@ export default async function SeriesPage({
         {/* Members are written after the series row, so an empty spine just
             after an add means the walk is still running. Saying nothing here
             renders a blank "main story" that reads as a broken page. */}
-        {series.hydrating ? (
-          <div className="pane rise mb-10 flex items-center gap-3 rounded-xl p-4">
-            <span className="size-3 shrink-0 animate-spin rounded-full border-2 border-[var(--color-border-strong)] border-t-[var(--color-accent)]" />
-            <div>
-              <p className="text-sm font-medium">Working out the seasons…</p>
-              <p className="text-[12px] text-[var(--color-dim)]">
-                Reading this franchise&apos;s structure. Refresh in a moment.
-              </p>
-            </div>
-          </div>
-        ) : null}
-
+        {series.hydrating ? <HydratingBanner /> : null}
 
         {/* ── the honest answer when there isn't one ── */}
         {series.ambiguous ? (
           <div className="pane mb-10 flex gap-3 rounded-xl border-[var(--color-upcoming)]/25 p-4">
             <AlertCircle className="mt-0.5 size-4 shrink-0 text-[var(--color-upcoming)]" />
             <div>
-              <p className="mb-1 text-sm font-medium">This franchise has parallel story lines.</p>
+              <p className="mb-1 text-sm font-medium">
+                This franchise has parallel story lines.
+              </p>
               <p className="text-sm text-[var(--color-dim)]">
                 Some entries retell the same story rather than continuing it, so there
                 is no single correct order. The main line is shown below; the
