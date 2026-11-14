@@ -65,7 +65,7 @@ export interface ProviderCapabilities {
 }
 
 export interface AnimeProvider {
-  readonly id: 'jikan' | 'mal';
+  readonly id: 'jikan' | 'mal' | 'kitsu';
   readonly capabilities: ProviderCapabilities;
 
   search(query: string, limit: number): Promise<RawWork[]>;

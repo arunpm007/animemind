@@ -1,12 +1,12 @@
 'use client';
 
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { Check, Loader2, Plus, Search } from 'lucide-react';
 import type { SearchResult } from '@/contracts';
 import { api, ApiRequestError } from '@/lib/api';
 import { cn } from '@/lib/cn';
+import { PosterImage } from '@/components/ui/PosterImage';
 import { StatusDot } from '@/components/ui/primitives';
 
 /**
@@ -220,9 +220,10 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
                 )}
               >
                 <div className="relative h-14 w-[38px] shrink-0 overflow-hidden rounded-[3px] bg-[var(--color-raised)]">
-                  {r.coverUrl ? (
-                    <Image src={r.coverUrl} alt="" fill sizes="38px" className="object-cover" />
-                  ) : null}
+                  {/* Not a raw next/image: it THROWS on a host missing from
+                      remotePatterns, which takes the whole page down. Adding a
+                      provider should never be able to do that. */}
+                  <PosterImage src={r.coverUrl} title={r.title} sizes="38px" />
                 </div>
 
                 <div className="min-w-0 flex-1">

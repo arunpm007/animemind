@@ -20,7 +20,7 @@ import { sql } from 'drizzle-orm';
 
 /* ────────────────────────────── enums ────────────────────────────── */
 
-export const providerEnum = pgEnum('provider', ['jikan', 'mal', 'manual']);
+export const providerEnum = pgEnum('provider', ['jikan', 'mal', 'manual', 'kitsu']);
 export const workKindEnum = pgEnum('work_kind', [
   'tv',
   'ona',

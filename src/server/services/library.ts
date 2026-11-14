@@ -12,7 +12,7 @@ import { account, series, seriesMember, userWork, work } from '../db/schema';
 import type { Actor } from '../http/api';
 import { HttpError, notFound } from '../http/api';
 import { toLibraryEntry, toUserProgress, toWorkSummary } from '../http/serialise';
-import { defaultProvider, ensureWork, upsertWork } from './ingest';
+import { defaultProvider, ensureWork, scheduleHydration, upsertWork } from './ingest';
 import { ProviderUnavailableError } from '../providers/types';
 
 type WorkRow = typeof work.$inferSelect;
@@ -206,6 +206,10 @@ export async function addToLibrary(
       .from(userWork)
       .innerJoin(work, eq(work.id, userWork.workId))
       .where(and(eq(userWork.userId, actor.userId), eq(userWork.workId, workId)));
+
+    // Work out the rest of the franchise in the background. The caller gets
+    // their row back now; the series page becomes available moments later.
+    scheduleHydration(workId);
 
     return toLibraryEntry(row.w, row.uw);
   });

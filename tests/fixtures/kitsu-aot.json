@@ -1,0 +1,580 @@
+{
+  "work": {
+    "id": "7442",
+    "type": "anime",
+    "attributes": {
+      "synopsis": "Centuries ago, mankind was slaughtered to near extinction by monstrous humanoid creatures called titans, forcing humans ",
+      "titles": {
+        "en": "Attack on Titan",
+        "en_jp": "Shingeki no Kyojin",
+        "en_us": "Attack on Titan",
+        "ja_jp": "\u9032\u6483\u306e\u5de8\u4eba"
+      },
+      "canonicalTitle": "Attack on Titan",
+      "abbreviatedTitles": [
+        "AoT"
+      ],
+      "averageRating": "84.4",
+      "startDate": "2013-04-07",
+      "endDate": "2013-09-29",
+      "popularityRank": 1,
+      "subtype": "TV",
+      "status": "finished",
+      "posterImage": {
+        "tiny": "https://media.kitsu.app/anime/poster_images/7442/tiny.jpg",
+        "large": "https://media.kitsu.app/anime/poster_images/7442/large.jpg",
+        "small": "https://media.kitsu.app/anime/poster_images/7442/small.jpg",
+        "medium": "https://media.kitsu.app/anime/poster_images/7442/medium.jpg",
+        "original": "https://media.kitsu.app/anime/poster_images/7442/original.jpg",
+        "meta": {
+          "dimensions": {
+            "tiny": {
+              "width": 110,
+              "height": 156
+            },
+            "large": {
+              "width": 550,
+              "height": 780
+            },
+            "small": {
+              "width": 284,
+              "height": 402
+            },
+            "medium": {
+              "width": 390,
+              "height": 554
+            }
+          }
+        }
+      },
+      "coverImage": {
+        "tiny": "https://media.kitsu.app/anime/cover_images/7442/tiny.jpg",
+        "large": "https://media.kitsu.app/anime/cover_images/7442/large.jpg",
+        "small": "https://media.kitsu.app/anime/cover_images/7442/small.jpg",
+        "original": "https://media.kitsu.app/anime/cover_images/7442/original.png",
+        "meta": {
+          "dimensions": {
+            "tiny": {
+              "width": 840,
+              "height": 200
+            },
+            "large": {
+              "width": 3360,
+              "height": 800
+            },
+            "small": {
+              "width": 1680,
+              "height": 400
+            }
+          }
+        }
+      },
+      "episodeCount": 25,
+      "episodeLength": 24
+    }
+  },
+  "relations": {
+    "data": [
+      {
+        "id": "1071",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "other"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "7889"
+            }
+          }
+        }
+      },
+      {
+        "id": "1072",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "alternative_version"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "8672"
+            }
+          }
+        }
+      },
+      {
+        "id": "1073",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "alternative_version"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "8673"
+            }
+          }
+        }
+      },
+      {
+        "id": "1074",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "adaptation"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "manga",
+              "id": "14916"
+            }
+          }
+        }
+      },
+      {
+        "id": "1075",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "spinoff"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "8674"
+            }
+          }
+        }
+      },
+      {
+        "id": "1076",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "spinoff"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "11315"
+            }
+          }
+        }
+      },
+      {
+        "id": "1077",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "side_story"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "7694"
+            }
+          }
+        }
+      },
+      {
+        "id": "1078",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "sequel"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "8671"
+            }
+          }
+        }
+      },
+      {
+        "id": "1079",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "summary"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "7838"
+            }
+          }
+        }
+      },
+      {
+        "id": "18901",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "spinoff"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "13718"
+            }
+          }
+        }
+      },
+      {
+        "id": "22053",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "side_story"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "42250"
+            }
+          }
+        }
+      },
+      {
+        "id": "31036",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "character"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "46202"
+            }
+          }
+        }
+      },
+      {
+        "id": "33269",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "summary"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "47129"
+            }
+          }
+        }
+      },
+      {
+        "id": "33275",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "summary"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "47130"
+            }
+          }
+        }
+      },
+      {
+        "id": "33283",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "summary"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "47131"
+            }
+          }
+        }
+      },
+      {
+        "id": "33534",
+        "type": "mediaRelationships",
+        "attributes": {
+          "role": "summary"
+        },
+        "relationships": {
+          "destination": {
+            "data": {
+              "type": "anime",
+              "id": "47259"
+            }
+          }
+        }
+      }
+    ],
+    "included": [
+      {
+        "id": "7889",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "Attack on Titan Chibi Theatre: Fly, Cadets, Fly!",
+          "titles": {
+            "en": "Attack on Titan Chibi Theatre: Fly, Cadets, Fly!",
+            "en_jp": "Shingeki no Kyojin Picture Drama",
+            "ja_jp": "\u300c\u9032\u6483\u306e\u5de8\u4eba\u300d\u3061\u307f\u30ad\u30e3\u30e9\u5287\u5834\"\u3068\u3093\u3067\u3051! \u8a13\u7df4\u5175\u56e3\""
+          },
+          "subtype": "special",
+          "status": "finished",
+          "startDate": "2013-07-17"
+        }
+      },
+      {
+        "id": "8672",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "Attack on Titan: Crimson Bow and Arrow",
+          "titles": {
+            "en": "Attack on Titan: Crimson Bow and Arrow",
+            "en_jp": "Shingeki no Kyojin Movie 1: Guren no Yumiya",
+            "en_us": "Attack on Titan: Crimson Bow and Arrow",
+            "ja_jp": "\u5287\u5834\u7248\u300c\u9032\u6483\u306e\u5de8\u4eba\u300d\u524d\u7de8\uff5e\u7d05\u84ee\u306e\u5f13\u77e2\uff5e"
+          },
+          "subtype": "movie",
+          "status": "finished",
+          "startDate": "2014-11-22"
+        }
+      },
+      {
+        "id": "8673",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "Attack on Titan: Wings of Freedom",
+          "titles": {
+            "en": "Attack on Titan: Wings of Freedom",
+            "en_jp": "Shingeki no Kyojin Movie 2: Jiyuu no Tsubasa",
+            "en_us": "Attack on Titan: Wings of Freedom",
+            "ja_jp": "\u5287\u5834\u7248\u300c\u9032\u6483\u306e\u5de8\u4eba\u300d\u5f8c\u7de8\uff5e\u81ea\u7531\u306e\u7ffc\uff5e"
+          },
+          "subtype": "movie",
+          "status": "finished",
+          "startDate": "2015-06-27"
+        }
+      },
+      {
+        "id": "8674",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "Attack on Titan: No Regrets",
+          "titles": {
+            "en": "Attack on Titan: No Regrets",
+            "en_jp": "Shingeki no Kyojin: Kuinaki Sentaku",
+            "ja_jp": "\u9032\u6483\u306e\u5de8\u4eba \u6094\u3044\u306a\u304d\u9078\u629e"
+          },
+          "subtype": "OVA",
+          "status": "finished",
+          "startDate": "2014-12-09"
+        }
+      },
+      {
+        "id": "11315",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "Attack on Titan: Junior High",
+          "titles": {
+            "en": "Attack on Titan: Junior High",
+            "en_jp": "Shingeki! Kyojin Chuugakkou",
+            "en_us": "Attack on Titan: Junior High",
+            "ja_jp": "\u9032\u6483\uff01\u5de8\u4eba\u4e2d\u5b66\u6821"
+          },
+          "subtype": "TV",
+          "status": "finished",
+          "startDate": "2015-10-04"
+        }
+      },
+      {
+        "id": "7694",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "Attack on Titan OVA",
+          "titles": {
+            "en": "Attack on Titan OVA",
+            "en_jp": "Shingeki no Kyojin OVA",
+            "ja_jp": "\u9032\u6483\u306e\u5de8\u4eba\uff2f\uff21\uff24"
+          },
+          "subtype": "OVA",
+          "status": "finished",
+          "startDate": "2013-12-09"
+        }
+      },
+      {
+        "id": "8671",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "Attack on Titan Season 2",
+          "titles": {
+            "en": "Attack on Titan Season 2",
+            "en_jp": "Shingeki no Kyojin Season 2",
+            "ja_jp": "\u9032\u6483\u306e\u5de8\u4eba Season 2"
+          },
+          "subtype": "TV",
+          "status": "finished",
+          "startDate": "2017-04-01"
+        }
+      },
+      {
+        "id": "7838",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "Attack on Titan: Since That Day",
+          "titles": {
+            "en": "Attack on Titan: Since That Day",
+            "en_jp": "Shingeki no Kyojin: Ano Hi Kara",
+            "en_us": "Attack on Titan: Since That Day",
+            "ja_jp": "\u9032\u6483\u306e\u5de8\u4eba \u7dcf\u96c6\u7de8\u300c\u3042\u306e\u65e5\u304b\u3089\u300d"
+          },
+          "subtype": "special",
+          "status": "finished",
+          "startDate": "2013-07-07"
+        }
+      },
+      {
+        "id": "13718",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "Attack on Titan: Lost Girls",
+          "titles": {
+            "en": "Attack on Titan: Lost Girls",
+            "en_jp": "Shingeki no Kyojin: Lost Girls",
+            "en_us": "Attack on Titan: Lost Girls",
+            "ja_jp": "\u9032\u6483\u306e\u5de8\u4eba LOST GIRLS"
+          },
+          "subtype": "OVA",
+          "status": "finished",
+          "startDate": "2017-12-08"
+        }
+      },
+      {
+        "id": "42250",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "Shingeki no Kyojin in the Dome: Heishi-tachi no Hoshizora",
+          "titles": {
+            "en_jp": "Shingeki no Kyojin in the Dome: Heishi-tachi no Hoshizora",
+            "ja_jp": "\u9032\u6483\u306e\u5de8\u4eba IN THE DOME -\u5175\u58eb\u305f\u3061\u306e\u661f\u7a7a-"
+          },
+          "subtype": "movie",
+          "status": "finished",
+          "startDate": "2017-05-20"
+        }
+      },
+      {
+        "id": "46202",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "Snickers x Shingeki no Kyojin",
+          "titles": {
+            "en_jp": "Snickers x Shingeki no Kyojin",
+            "ja_jp": "\u30b9\u30cb\u30c3\u30ab\u30fc\u30ba\u00d7\u9032\u6483\u306e\u5de8\u4eba"
+          },
+          "subtype": "special",
+          "status": "finished",
+          "startDate": "2019-10-01"
+        }
+      },
+      {
+        "id": "47129",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "10-pun de Oitsukeru: Shingeki no Kyojin",
+          "titles": {
+            "en": "Attack on Titan in 10 Minutes",
+            "en_jp": "10-pun de Oitsukeru: Shingeki no Kyojin",
+            "ja_jp": "10\u5206\u3067\u8ffd\u3044\u3064\u3051\u308b\uff01\u30a2\u30cb\u30e1\u300c\u9032\u6483\u306e\u5de8\u4eba\u300d"
+          },
+          "subtype": "ONA",
+          "status": "finished",
+          "startDate": "2018-07-02"
+        }
+      },
+      {
+        "id": "47130",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "15-pun de Oitsukeru: Shingeki no Kyojin",
+          "titles": {
+            "en": "Attack on Titan in 15 Minutes",
+            "en_jp": "15-pun de Oitsukeru: Shingeki no Kyojin",
+            "ja_jp": "15\u5206\u3067\u8ffd\u3044\u3064\u3051\u308b\uff01\u30a2\u30cb\u30e1\u300e\u9032\u6483\u306e\u5de8\u4eba\u300f"
+          },
+          "subtype": "ONA",
+          "status": "finished",
+          "startDate": "2020-12-02"
+        }
+      },
+      {
+        "id": "47131",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "20-pun de Oitsukeru: Shingeki no Kyojin",
+          "titles": {
+            "en": "Attack on Titan in 20 Minutes",
+            "en_jp": "20-pun de Oitsukeru: Shingeki no Kyojin",
+            "ja_jp": "20\u5206\u3067\u8ffd\u3044\u3064\u3051\u308b\uff01\u30a2\u30cb\u30e1\u300e\u9032\u6483\u306e\u5de8\u4eba\u300f"
+          },
+          "subtype": "ONA",
+          "status": "finished",
+          "startDate": "2021-12-27"
+        }
+      },
+      {
+        "id": "47259",
+        "type": "anime",
+        "attributes": {
+          "canonicalTitle": "25-pun de Oitsukeru: Shingeki no Kyojin",
+          "titles": {
+            "en": "Attack on Titan in 25 Minutes",
+            "en_jp": "25-pun de Oitsukeru: Shingeki no Kyojin",
+            "ja_jp": "25\u5206\u3067\u8ffd\u3044\u3064\u3051\u308b\uff01\u30a2\u30cb\u30e1\u300e\u9032\u6483\u306e\u5de8\u4eba\u300f"
+          },
+          "subtype": "ONA",
+          "status": "finished",
+          "startDate": "2023-02-18"
+        }
+      },
+      {
+        "id": "14916",
+        "type": "manga",
+        "attributes": {
+          "canonicalTitle": "Attack on Titan",
+          "titles": {
+            "ar": "\u0627\u0644\u0639\u0645\u0644\u0627\u0642 \u0627\u0644\u0645\u0647\u0627\u062c\u0645",
+            "en": "Attack on Titan",
+            "cs_cz": "\u00datok Tit\u00e1n\u016f",
+            "en_jp": "Shingeki no Kyojin",
+            "es_es": "Ataque a los Titanes",
+            "fa_ir": "\u062d\u0645\u0644\u0647 \u0628\u0647 \u062a\u0627\u06cc\u062a\u0627\u0646",
+            "fi_fi": "Titaanien sota",
+            "fr_fr": "L'Attaque des Titans",
+            "hr_hr": "Napad Titana",
+            "it_it": "L'attacco dei Giganti",
+            "ja_jp": "\u9032\u6483\u306e\u5de8\u4eba",
+            "ko_kr": "\uc9c4\uaca9\uc758 \uac70\uc778",
+            "pt_br": "Ataque dos Tit\u00e3s",
+            "ru_ru": "\u0410\u0442\u0430\u043a\u0430 \u043d\u0430 \u0442\u0438\u0442\u0430\u043d\u043e\u0432",
+            "th_th": "\u0e1c\u0e48\u0e32\u0e1e\u0e34\u0e20\u0e1e\u0e44\u0e17\u0e17\u0e31\u0e19",
+            "tr_tr": "Titana Sald\u0131r\u0131",
+            "vi_vn": "\u0110\u1ea1i Chi\u1ebfn Titan",
+            "zh_cn": "\u8fdb\u51fb\u7684\u5de8\u4eba"
+          },
+          "subtype": "manga",
+          "status": "finished",
+          "startDate": "2009-09-09"
+        }
+      }
+    ]
+  }
+}

@@ -222,11 +222,15 @@ describe('refresh token rotation', () => {
 
 describe('library', () => {
   it('adds a title already present in the catalog', async () => {
+    // By internal workId, not providerId. Ids are per-provider: '16498' is a
+    // MyAnimeList id, and under the current primary provider (Kitsu) that
+    // number identifies a completely different show. The internal id is also
+    // what /search returns and what the client sends.
     const res = await libraryPost(
       json('http://t/api/v1/library', {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({ providerId: '16498', status: 'watching' }),
+        body: JSON.stringify({ workId, status: 'watching' }),
       }),
       {},
     );

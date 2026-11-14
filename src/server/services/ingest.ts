@@ -14,6 +14,7 @@ import {
 } from '../db/schema';
 import { ChainProvider } from '../providers/chain';
 import { JikanProvider } from '../providers/jikan';
+import { KitsuProvider } from '../providers/kitsu';
 import { MalProvider } from '../providers/mal';
 import type { AnimeProvider, RawWork } from '../providers/types';
 import type { CacheAdapter } from '../providers/http';
@@ -68,10 +69,22 @@ const dbCache: CacheAdapter = {
  * Without it: Jikan alone, which is where this started.
  */
 export function defaultProvider(): AnimeProvider {
-  const clientId = process.env.MAL_CLIENT_ID?.trim();
-  const jikan = new JikanProvider(dbCache);
-  if (!clientId) return jikan;
-  return new ChainProvider([new MalProvider(clientId, dbCache), jikan]);
+  // Kitsu leads, always. It needs no API key, so a fresh clone works with no
+  // signup, and it is the only key-free source with TYPED relations — which
+  // the series builder cannot function without. Measured 8/8 available while
+  // Jikan managed 0/10.
+  const chain: AnimeProvider[] = [new KitsuProvider(dbCache)];
+
+  // Optional second opinion. MAL has richer broadcast data (day and time of
+  // week, which Kitsu omits), so it is worth having when a key is configured.
+  const malClientId = process.env.MAL_CLIENT_ID?.trim();
+  if (malClientId) chain.push(new MalProvider(malClientId, dbCache));
+
+  // Last resort. Kept because it carries filler-episode flags that nothing
+  // else does, and a third fallback costs nothing when the first two work.
+  chain.push(new JikanProvider(dbCache));
+
+  return new ChainProvider(chain);
 }
 
 /* ─────────────────────────── change detection ─────────────────────────── */
@@ -120,7 +133,7 @@ function nextSyncAt(w: RawWork): Date {
 
 /* ──────────────────────────────── upsert ──────────────────────────────── */
 
-function rowFrom(w: RawWork, providerId: 'jikan' | 'mal') {
+function rowFrom(w: RawWork, providerId: 'jikan' | 'mal' | 'kitsu') {
   return {
     provider: providerId,
     providerId: w.providerId,
@@ -162,7 +175,7 @@ export interface UpsertResult {
 /** Insert or update one work, emitting an event for each meaningful change. */
 export async function upsertWork(
   w: RawWork,
-  providerId: 'jikan' | 'mal' = 'jikan',
+  providerId: 'jikan' | 'mal' | 'kitsu' = 'kitsu',
 ): Promise<UpsertResult> {
   const db = unscoped();
   const next = rowFrom(w, providerId);
@@ -487,6 +500,47 @@ export async function ensureWork(
   const raw = await provider.getWork(providerWorkId);
   const { id } = await upsertWork(raw, provider.id);
   return id;
+}
+
+/* ───────────────────── background hydration ───────────────────── */
+
+/** Works currently being hydrated, so two adds cannot duplicate the walk. */
+const hydrating = new Set<string>();
+
+/**
+ * Walk relations and build the series, without making the caller wait.
+ *
+ * Adding a title used to record the work and stop there: no relations, no
+ * series, no "season 3 is announced" — the answer the whole product exists to
+ * give. The refresh worker would eventually notice, but "eventually" is up to
+ * six hours after someone pressed Add, which is indistinguishable from broken.
+ *
+ * Deliberately fire-and-forget. The HTTP response returns in ~100ms while this
+ * continues in the background; a long-running Node process is exactly what
+ * this app deploys as, which is also why it is not on serverless.
+ */
+export function scheduleHydration(workId: string): void {
+  if (hydrating.has(workId)) return;
+  hydrating.add(workId);
+
+  void (async () => {
+    try {
+      const db = unscoped();
+      const row = await db.query.work.findFirst({ where: eq(work.id, workId) });
+      if (!row) return;
+
+      if (!row.relationsHydrated) {
+        await hydrateRelations(workId, defaultProvider(), { budget: 25, depth: 2 });
+      }
+      await recomputeSeries(workId);
+    } catch (err) {
+      // Never surface: the title is already saved and usable, and the next
+      // refresh run retries. Failing here must not break the add.
+      console.warn(`background hydration failed for ${workId}:`, err);
+    } finally {
+      hydrating.delete(workId);
+    }
+  })();
 }
 
 /** Fill the episode list. Lazy: One Piece is 11 pages and nobody is waiting. */

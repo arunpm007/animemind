@@ -25,7 +25,7 @@ import { ProviderNotFoundError, ProviderUnavailableError } from './types';
  * request and at worst return a different show entirely.
  */
 export class ChainProvider implements AnimeProvider {
-  readonly id: 'jikan' | 'mal';
+  readonly id: 'jikan' | 'mal' | 'kitsu';
   readonly capabilities: ProviderCapabilities;
 
   constructor(private readonly providers: AnimeProvider[]) {

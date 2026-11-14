@@ -72,6 +72,12 @@ export const jikanBucket = new TokenBucket({ ratePerSecond: 2, perMinute: 50 });
  */
 export const malBucket = new TokenBucket({ ratePerSecond: 3, perMinute: 90 });
 
+/**
+ * Kitsu publishes no hard limit and is the primary source, so this is the
+ * roomiest bucket — still conservative enough to be a good guest.
+ */
+export const kitsuBucket = new TokenBucket({ ratePerSecond: 4, perMinute: 120 });
+
 /* ─────────────────────────── circuit breaker ─────────────────────────── */
 
 /**

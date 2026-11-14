@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
     // rather than a wildcard: this list is an allowlist of who may be
     // proxied through our own image optimiser.
     remotePatterns: [
+      // Kitsu — the primary provider.
+      { protocol: 'https', hostname: 'media.kitsu.app' },
+      { protocol: 'https', hostname: 'media.kitsu.io' },
+      // MyAnimeList, via Jikan or the official API.
       { protocol: 'https', hostname: 'cdn.myanimelist.net' },
       { protocol: 'https', hostname: 'api-cdn.myanimelist.net' },
     ],

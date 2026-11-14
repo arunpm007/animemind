@@ -111,23 +111,23 @@ with `max()` within a rewatch pass, not last-write-wins. The rules are in
 
 ## Data
 
-Two sources, chained, because neither is complete alone:
+Three sources, chained, with **Kitsu** as primary:
 
 | | Role | Why |
 |---|---|---|
-| **MyAnimeList API v2** | primary | First-party, ~0.46s, and inlines `media_type`/`status` on related works so a neighbour needs no extra request |
-| **Jikan** | fallback + episodes | Has per-episode data, which MAL v2 does not expose at all |
+| **Kitsu** | primary | No API key, typed relations with the neighbour's format inline, episode lists, poster *and* banner art |
+| **MyAnimeList API v2** | optional | Richer broadcast data (day and time of week). Needs a free `MAL_CLIENT_ID` |
+| **Jikan** | last resort | Carries filler-episode flags nothing else does |
 
-Set `MAL_CLIENT_ID` (free, two minutes at
-[myanimelist.net/apiconfig](https://myanimelist.net/apiconfig)) and the chain
-activates automatically. Without it the app runs on Jikan alone — which works,
-but Jikan is a volunteer-run mirror of MyAnimeList and was measured here at
-roughly **10% availability** (1 of 10 probes for by-id, 0 of 10 for search)
-while MyAnimeList itself answered in about a second.
+Kitsu leads because it is the only key-free source with **typed** relations
+(`sequel`, `spinoff`, `alternative_version`…), which the series builder cannot
+work without — and because it is actually up. Measured over three sessions:
+Jikan answered 1/10, then 0/10, then 0/10; Kitsu answered 8/8 in under a
+second. A fresh clone works with no signup at all.
 
-Everything upstream is cached, rate-limited and given a per-attempt timeout.
-When every provider fails, search falls back to your own catalog and says so
-rather than pretending no such anime exists.
+Everything upstream is cached, rate-limited, given a per-attempt timeout, and
+fronted by a circuit breaker. When every provider fails, search falls back to
+your own catalog and says so rather than pretending no such anime exists.
 
 AniList is **not** used: its terms prohibit use of the API "within competing,
 non-complementary services of the same nature… including anime and manga list

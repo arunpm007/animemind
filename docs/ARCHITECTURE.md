@@ -145,9 +145,30 @@ do not.
 
 ## 4. The provider is assumed to be down
 
-Jikan is a scraper of MyAnimeList and inherits its downtime. During
-development of this app, direct probes returned `504 Jikan failed to connect to
-MyAnimeList` and outright connection failures roughly two times in three.
+This started on Jikan, a community mirror of MyAnimeList, and that was a
+mistake worth recording. Measured availability across three sessions: **1/10,
+then 0/10, then 0/10**, while MyAnimeList itself answered in about a second.
+A mirror inherits the uptime of the thing it mirrors *and* its own.
+
+**Kitsu is now primary.** It was chosen for one hard requirement and three
+conveniences:
+
+- **Typed relations, free.** `sequel`, `prequel`, `spinoff`,
+  `alternative_version` — the series builder cannot work without these, and no
+  other key-free source provides them. (The `anime-offline-database` dump was
+  evaluated and rejected: its `relatedAnime` is a bare list of URLs with no
+  types at all, and its releases had gone four months stale.)
+- The neighbour's subtype arrives **inline**, removing the request-per-neighbour
+  that Jikan forces.
+- It has **episode lists**, which the official MyAnimeList API v2 does not.
+- It has **banner art**, which neither of the others does.
+
+AniList would have been the obvious technical pick — better structured than
+all of them — but its terms prohibit use "within competing, non-complementary
+services… including anime and manga list or tracker services", which describes
+this product precisely.
+
+Everything below applies regardless of which provider leads.
 
 Consequences, all of them load-bearing:
 
