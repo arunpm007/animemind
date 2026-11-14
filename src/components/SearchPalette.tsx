@@ -185,9 +185,27 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
           ) : null}
 
           {!error && !loading && q.trim().length >= 2 && results.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-[var(--color-dim)]">
-              Nothing found for “{q.trim()}”.
-            </p>
+            degraded ? (
+              // "Nothing found" is a claim about the world and we are in no
+              // position to make it: the catalog only holds what has already
+              // been looked up, and the provider is unreachable. Saying it
+              // anyway tells the user their anime does not exist, which is
+              // both wrong and the most discouraging thing we could say.
+              <div className="px-5 py-7 text-center">
+                <p className="mb-1.5 text-sm">
+                  Not in your library yet.
+                </p>
+                <p className="text-xs leading-relaxed text-[var(--color-dim)]">
+                  We can&apos;t reach the anime database to look up
+                  &ldquo;{q.trim()}&rdquo; right now. It will be findable once
+                  the database is back.
+                </p>
+              </div>
+            ) : (
+              <p className="px-4 py-8 text-center text-sm text-[var(--color-dim)]">
+                Nothing found for &ldquo;{q.trim()}&rdquo;.
+              </p>
+            )
           ) : null}
 
           {q.trim().length >= 2 ? results.map((r, i) => {
