@@ -56,7 +56,10 @@ export default async function TodayPage() {
                     className="pane flex items-center gap-4 rounded-xl p-3 pr-5"
                   >
                     <div className="w-[52px] shrink-0">
-                      <Poster work={item.work} />
+                      <Poster
+                        work={item.work}
+                        href={item.seriesSlug ? `/series/${item.seriesSlug}` : undefined}
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex items-center gap-2">
@@ -65,7 +68,18 @@ export default async function TodayPage() {
                           Now available
                         </span>
                       </div>
-                      <p className="truncate font-medium">{item.work.title}</p>
+                      <p className="truncate font-medium">
+                        {item.seriesSlug ? (
+                          <Link
+                            href={`/series/${item.seriesSlug}`}
+                            className="hover:text-[var(--color-accent-soft)]"
+                          >
+                            {item.work.title}
+                          </Link>
+                        ) : (
+                          item.work.title
+                        )}
+                      </p>
                       <p className="truncate text-xs text-[var(--color-dim)]">
                         because you finished {item.becauseYouFinished}
                       </p>
@@ -77,7 +91,14 @@ export default async function TodayPage() {
                       >
                         Start
                       </Link>
-                    ) : null}
+                    ) : (
+                      // No slug means the series is still being derived. Say
+                      // so rather than rendering a card with nothing on it —
+                      // an inert row reads as a broken app.
+                      <span className="shrink-0 text-[11px] text-[var(--color-mute)]">
+                        preparing…
+                      </span>
+                    )}
                   </article>
                 ))}
               </div>
@@ -176,10 +197,24 @@ export default async function TodayPage() {
                     className="pane flex items-center gap-3 rounded-xl p-3"
                   >
                     <div className="w-[40px] shrink-0">
-                      <Poster work={item.work} />
+                      <Poster
+                        work={item.work}
+                        href={item.seriesSlug ? `/series/${item.seriesSlug}` : undefined}
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{item.work.title}</p>
+                      <p className="truncate text-sm font-medium">
+                        {item.seriesSlug ? (
+                          <Link
+                            href={`/series/${item.seriesSlug}`}
+                            className="hover:text-[var(--color-accent-soft)]"
+                          >
+                            {item.work.title}
+                          </Link>
+                        ) : (
+                          item.work.title
+                        )}
+                      </p>
                       <div className="mt-1 flex items-center gap-2">
                         <StatusDot status={item.status} short />
                         <span className="text-[11px] text-[var(--color-mute)]">

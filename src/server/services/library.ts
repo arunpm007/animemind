@@ -397,14 +397,28 @@ export async function getDashboard(actor: Actor): Promise<Dashboard> {
       .where(and(eq(userWork.userId, actor.userId), isNull(userWork.deletedAt)));
 
     const slugByWork = new Map<string, string>();
-    if (rows.length) {
+
+    /**
+     * Resolve series slugs for a set of works.
+     *
+     * Called twice on purpose. Looking these up only for the user's OWN
+     * library — which is what this did — guarantees a miss for the two
+     * sections that matter most: "new season available" and "waiting on" are
+     * by definition titles NOT in the library yet. Their slug came back null,
+     * so the only link on the row never rendered and the card was inert.
+     */
+    const resolveSlugs = async (workIds: string[]) => {
+      const missing = workIds.filter((id) => !slugByWork.has(id));
+      if (!missing.length) return;
       const memberRows = await tx
         .select({ workId: seriesMember.workId, slug: series.slug })
         .from(seriesMember)
         .innerJoin(series, eq(series.id, seriesMember.seriesId))
-        .where(inArray(seriesMember.workId, rows.map((r) => r.w.id)));
+        .where(inArray(seriesMember.workId, missing));
       for (const m of memberRows) slugByWork.set(m.workId, m.slug);
-    }
+    };
+
+    await resolveSlugs(rows.map((r) => r.w.id));
 
     const counts = {
       watching: rows.filter((r) => r.uw.status === 'watching' || r.uw.rewatching).length,
@@ -473,6 +487,8 @@ export async function getDashboard(actor: Actor): Promise<Dashboard> {
 
       const nextIds = successors.map((s) => s.nextId).filter((id) => !ownedIds.has(id));
       if (nextIds.length) {
+        // These are unowned, so they were not covered by the first pass.
+        await resolveSlugs(nextIds);
         const nextWorks = await tx.select().from(work).where(inArray(work.id, nextIds));
         const fromTitle = new Map(successors.map((s) => [s.nextId, s.fromTitle]));
 
