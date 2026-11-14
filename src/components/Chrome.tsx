@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Clock3, Compass, Library, Search, Tv, UserRound } from 'lucide-react';
+import { Clock3, Compass, Library, ListChecks, Search, Tv, UserRound } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 /**
@@ -10,12 +10,21 @@ import { cn } from '@/lib/cn';
  * deliberate constraint: this product's failure mode is becoming a second
  * MyAnimeList, and a growing nav is the first symptom. Anything that wants to
  * be a sixth item belongs inside one of these five.
+ *
+ * The fifth slot is now spent, on "Up next". It earns it by being the only
+ * home for `planned` and `on_hold` — two of the five watch states, which the
+ * add sheet used to file under "Library" and which were then unreachable in a
+ * poster wall sorted by recency.
+ *
+ * Ordered by how much a decision is wanted: today, then the backlog, then
+ * what is under way, then what has not arrived, with the archive last.
  */
 const NAV = [
   { href: '/', label: 'Today', icon: Compass },
-  { href: '/library', label: 'Library', icon: Library },
+  { href: '/next', label: 'Up next', icon: ListChecks },
   { href: '/watching', label: 'Watching', icon: Tv },
   { href: '/waiting', label: 'Waiting', icon: Clock3 },
+  { href: '/library', label: 'Library', icon: Library },
 ] as const;
 
 export function Sidebar({ onSearch }: { onSearch: () => void }) {
@@ -96,7 +105,9 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
 export function TabBar({ onSearch }: { onSearch: () => void }) {
   const path = usePathname();
   return (
-    <nav aria-label="Sections" className="pane fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around rounded-t-2xl px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
+    // Six cells now (five destinations plus search), so the gutters and the
+    // label size come down to keep them on one line at 375px.
+    <nav aria-label="Sections" className="pane fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around rounded-t-2xl px-0.5 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden">
       {NAV.map(({ href, label, icon: Icon }) => {
         const active = href === '/' ? path === '/' : path.startsWith(href);
         return (
@@ -105,22 +116,22 @@ export function TabBar({ onSearch }: { onSearch: () => void }) {
             href={href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'flex flex-1 flex-col items-center gap-1 rounded-lg py-1.5 text-[10px] transition-colors duration-[160ms]',
+              'flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg px-0.5 py-1.5 text-[9px] transition-colors duration-[160ms]',
               active ? 'text-[var(--color-accent)]' : 'text-[var(--color-mute)]',
             )}
           >
-            <Icon className="size-[18px]" />
-            {label}
+            <Icon className="size-[18px] shrink-0" />
+            <span className="max-w-full truncate">{label}</span>
           </Link>
         );
       })}
       <button
         type="button"
         onClick={onSearch}
-        className="flex flex-1 flex-col items-center gap-1 rounded-lg py-1.5 text-[10px] text-[var(--color-mute)]"
+        className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg px-0.5 py-1.5 text-[9px] text-[var(--color-mute)]"
       >
-        <Search className="size-[18px]" />
-        Search
+        <Search className="size-[18px] shrink-0" />
+        <span className="max-w-full truncate">Search</span>
       </button>
     </nav>
   );

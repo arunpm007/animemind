@@ -241,28 +241,45 @@ export default async function TodayPage() {
           ) : null}
 
           {/* ── the library lives one link away, not on this page ── */}
-          <Section title="Your library">
-            <Link
-              href="/library"
-              className="pane flex items-center justify-between rounded-xl px-5 py-4 transition-colors duration-[160ms] hover:border-[var(--color-border-strong)]"
-            >
-              <dl className="flex flex-wrap gap-x-8 gap-y-2">
-                {(
-                  [
-                    ['Total', data.counts.total],
-                    ['Watching', data.counts.watching],
-                    ['Completed', data.counts.completed],
-                    ['Planned', data.counts.planned],
-                  ] as const
-                ).map(([label, value]) => (
-                  <div key={label}>
-                    <dt className="t-label mb-1">{label}</dt>
-                    <dd className="tnum text-xl font-semibold">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-              <ArrowRight className="size-4 shrink-0 text-[var(--color-mute)]" />
-            </Link>
+          {/* Each counter goes where that counter lives.
+              These were one <Link href="/library"> wrapping all four, so
+              clicking "Planned 7" landed on an unfiltered poster wall — the
+              number named a set the app then refused to show you. Nested
+              anchors are invalid, so the wrapper had to go rather than gain
+              children. */}
+          <Section
+            title="Your library"
+            action={
+              <Link
+                href="/library"
+                className="flex items-center gap-1 text-[12px] text-[var(--color-mute)] transition-colors duration-[160ms] hover:text-[var(--color-text)]"
+              >
+                View all <ArrowRight className="size-3" />
+              </Link>
+            }
+          >
+            <dl className="pane flex flex-wrap gap-x-8 gap-y-2 rounded-xl px-5 py-4">
+              {(
+                [
+                  ['Total', data.counts.total, '/library'],
+                  ['Watching', data.counts.watching, '/watching'],
+                  ['Completed', data.counts.completed, '/library?status=completed'],
+                  ['Planned', data.counts.planned, '/next'],
+                ] as const
+              ).map(([label, value, target]) => (
+                <div key={label}>
+                  <dt className="t-label mb-1">{label}</dt>
+                  <dd>
+                    <Link
+                      href={target}
+                      className="tnum text-xl font-semibold transition-colors duration-[160ms] hover:text-[var(--color-accent-soft)]"
+                    >
+                      {value}
+                    </Link>
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </Section>
         </div>
       </div>

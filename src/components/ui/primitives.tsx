@@ -102,16 +102,19 @@ export function Poster({
   href,
   priority,
   className,
+  quiet,
 }: {
   work: WorkSummary;
   href?: string;
   priority?: boolean;
   className?: string;
+  /** The title is shown beside this poster — see PosterImage. */
+  quiet?: boolean;
 }) {
   const inner = (
     <div className={cn('group relative', className)}>
       <div className="poster relative overflow-hidden">
-        <PosterImage src={work.coverUrl} title={work.title} priority={priority} />
+        <PosterImage src={work.coverUrl} title={work.title} priority={priority} quiet={quiet} />
         {/* Bottom scrim so a title over art stays legible on pale covers. */}
         <div
           aria-hidden

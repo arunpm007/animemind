@@ -197,14 +197,26 @@ across known and unknown emails, so it cannot be used to enumerate accounts.
 **`GET /search?q=&limit=`** — works signed out. Each result carries:
 
 ```jsonc
-{ "id": "…", "title": "…", "inLibrary": true, "libraryStatus": "completed" }
+{
+  "id": "…",              // our internal UUID — see below
+  "title": "…",
+  "inLibrary": true,
+  "libraryStatus": "completed",
+  "libraryProgress": 12
+}
 ```
 
 `inLibrary` is the field that matters. It answers *"have I already seen this?"*
-in the results list, with no second request. Render it prominently.
+in the results list, with no second request. Render it prominently — and if
+you build an add/edit sheet, read all three: a result the user already owns
+must open as an **edit**, pre-filled from `libraryStatus` and
+`libraryProgress`, not as an empty "add" form.
 
-`id` here is the **provider id** (a MyAnimeList id), which is what `POST
-/library` expects. Elsewhere, `work.id` is our internal UUID.
+`id` is our internal **UUID**, not a provider id. Pass it to `POST /library`
+as `workId`. (This doc previously claimed it was a MyAnimeList id; clients
+that believed it sent `providerId`, missed the lookup, and fell through to a
+network round trip that took ~13s and failed outright whenever the provider
+was down.) `providerId` is still accepted, for a client that only has one.
 
 **`GET /series/{slug}`** — the derived structure:
 
@@ -234,13 +246,25 @@ recap | alternative | other`. Group by it; `recap` is safely skippable.
 | | |
 |---|---|
 | `GET /library?status=` | All entries |
-| `POST /library` | `{ providerId, status?, progress? }` — 201 |
+| `POST /library` | `{ workId \| providerId, status?, progress? }` — 201 |
 | `GET /dashboard` | The home screen, precomputed |
+| `GET /up-next` | The backlog, precomputed |
 
 `GET /dashboard` returns `continueWatching`, `newlyAvailable` (a sequel aired
 and you finished the previous entry) and `waitingOn` (announced, not yet
 aired). Prefer it over assembling the home screen client-side — the
 "because you finished X" attribution comes from the series graph.
+
+`GET /up-next` returns the backlog in three disjoint buckets — `paused`
+(on hold), `readyToStart` (planned and already aired) and `continueSeries`
+(not in the library, but follows something finished) — plus `notOutYet`, a
+count of what was added or awaited but has not been released.
+
+Every row carries its franchise roll-up: `entriesWatched`/`entriesTotal`,
+`episodesWatched`/`episodesTotal` and `availableNow`. Use the episode numbers
+over the entry numbers — "1 of 2 entries" of a 1000-episode show reads as
+halfway. `episodesTotal` is **null** when any entry on the spine has no
+episode count yet; render that as "?" rather than substituting a number.
 
 ### Operations
 

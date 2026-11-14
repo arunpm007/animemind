@@ -43,7 +43,10 @@ const CHOICES: Array<{
     value: 'planned',
     label: 'Plan to watch',
     hint: "Haven't started it",
-    destination: 'Library',
+    // These two used to say "Library", which was true and useless: the
+    // library is a poster wall sorted by recency, so neither state was
+    // actually findable once it got there.
+    destination: 'Up next → Ready to start',
   },
   {
     value: 'watching',
@@ -57,7 +60,7 @@ const CHOICES: Array<{
     hint: 'Seen all of it',
     destination: 'Library · and Waiting, if a sequel is coming',
   },
-  { value: 'on_hold', label: 'On hold', hint: 'Paused', destination: 'Library' },
+  { value: 'on_hold', label: 'On hold', hint: 'Paused', destination: 'Up next → Paused' },
   { value: 'dropped', label: 'Dropped', hint: 'Not continuing', destination: 'Library' },
 ];
 
@@ -70,8 +73,24 @@ export function AddSheet({
   onClose: () => void;
   onAdded?: (workId: string) => void;
 }) {
-  const [choice, setChoice] = useState<WatchStateDto>('planned');
-  const [episode, setEpisode] = useState('1');
+  /**
+   * Already held, so this is an EDIT.
+   *
+   * The sheet previously had no idea: clicking a result marked "Watching"
+   * reopened an empty "Add to library" form, offering to file something the
+   * user had just filed. It read as the app having forgotten, which in an app
+   * whose entire promise is remembering is about the worst impression
+   * available.
+   */
+  const held = result.inLibrary;
+
+  // Start from where they actually are, not from a default.
+  const [choice, setChoice] = useState<WatchStateDto>(
+    result.libraryStatus ?? 'planned',
+  );
+  const [episode, setEpisode] = useState(
+    String(result.libraryProgress && result.libraryProgress > 0 ? result.libraryProgress : 1),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedSlug, setSavedSlug] = useState<string | null | undefined>(undefined);
@@ -133,7 +152,7 @@ export function AddSheet({
       className="fixed inset-0 z-[60] flex items-center justify-center px-4"
       role="dialog"
       aria-modal="true"
-      aria-label={`Add ${result.title}`}
+      aria-label={held ? `Update ${result.title}` : `Add ${result.title}`}
     >
       <button
         aria-hidden
@@ -169,7 +188,7 @@ export function AddSheet({
               <span className="flex size-5 items-center justify-center rounded-full bg-[var(--color-airing)]/20">
                 <Check className="size-3 text-[var(--color-airing)]" />
               </span>
-              Added to your library.
+              {held ? 'Updated.' : 'Added to your library.'}
             </div>
             <p className="mb-4 flex items-center gap-1.5 text-[13px] text-[var(--color-accent-soft)]">
               <CornerDownRight className="size-3" />
@@ -206,8 +225,25 @@ export function AddSheet({
           /* ── choose ── */
           <>
             <div className="p-3">
-              <p className="t-label mb-2.5 px-1.5">Where are you with this?</p>
-              <div role="radiogroup" aria-label="Where are you with this?" className="flex flex-col gap-0.5">
+              {held ? (
+                <p className="mb-2.5 flex items-center gap-1.5 rounded-lg bg-[var(--color-airing)]/10 px-2.5 py-1.5 text-[11px] text-[var(--color-airing)]">
+                  <Check className="size-3 shrink-0" />
+                  Already in your library
+                  {result.libraryProgress ? (
+                    <span className="tnum opacity-80">
+                      · episode {result.libraryProgress}
+                    </span>
+                  ) : null}
+                </p>
+              ) : null}
+              <p className="t-label mb-2.5 px-1.5">
+                {held ? 'Update where you are' : 'Where are you with this?'}
+              </p>
+              <div
+                role="radiogroup"
+                aria-label={held ? 'Update where you are' : 'Where are you with this?'}
+                className="flex flex-col gap-0.5"
+              >
                 {CHOICES.map((c) => (
                   <button
                     key={c.value}
@@ -312,7 +348,7 @@ export function AddSheet({
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white transition-transform duration-[160ms] active:scale-[0.98] disabled:opacity-60"
               >
                 {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-                Add to library
+                {held ? 'Update' : 'Add to library'}
               </button>
             </div>
           </>

@@ -134,8 +134,72 @@ export const librarySeriesEntry = z.object({
   /** True when any of the above has already aired. */
   hasUnwatchedNext: z.boolean(),
   lastWatchedAt: instant.nullable(),
+
+  /**
+   * Progress across the WHOLE spine, in episodes rather than entries.
+   *
+   * "3 of 6 seasons" and "59 of 87 episodes" answer different questions.
+   * Seasons vary from 11 to 100+ episodes, so an entry count badly
+   * misrepresents how much of a franchise is actually left: 1 of 2 entries of
+   * One Piece is not half of One Piece.
+   */
+  episodesWatched: z.number().int(),
+  /** Null when any spine entry has no episode count yet — an airing or
+   *  announced season — because a total that silently omits it is a lie. */
+  episodesTotal: z.number().int().nullable(),
+
+  /**
+   * Spine entries that have aired and the user has not finished.
+   *
+   * The backlog depth for this series: what could be watched tonight. Counts
+   * both entries missing from the library and ones sitting in it as planned
+   * or on hold, because from the sofa those are the same thing.
+   */
+  availableNow: z.number().int(),
 });
 export type LibrarySeriesEntry = z.infer<typeof librarySeriesEntry>;
+
+/* ──────────────────────────────── up next ───────────────────────────── */
+
+/**
+ * One actionable row on the backlog screen.
+ *
+ * Carries the series roll-up with it. The complaint this answers is having to
+ * open each series page to find out how far in you are and what is left, so a
+ * row that cannot say that is not worth showing.
+ */
+export const upNextRow = z.object({
+  work: workSummary,
+  seriesSlug: z.string().nullable(),
+  seriesTitle: z.string().nullable(),
+
+  /** Why this is on the list, in the user's own terms — "follows AoT S3". */
+  reason: z.string().nullable(),
+
+  /** Where they stopped, for a paused entry. Null when never started. */
+  progress: z.number().int().nullable(),
+  lastWatchedAt: instant.nullable(),
+
+  entriesWatched: z.number().int(),
+  entriesTotal: z.number().int(),
+  episodesWatched: z.number().int(),
+  episodesTotal: z.number().int().nullable(),
+  availableNow: z.number().int(),
+});
+export type UpNextRow = z.infer<typeof upNextRow>;
+
+export const upNext = z.object({
+  /** Started, then stopped. Highest intent — they already committed time. */
+  paused: z.array(upNextRow),
+  /** Added as "plan to watch" and already out. */
+  readyToStart: z.array(upNextRow),
+  /** Not in the library at all, but follows something finished. */
+  continueSeries: z.array(upNextRow),
+  /** Planned or awaited but not released. Lives on /waiting; counted here so
+   *  the page can say where it went instead of silently dropping it. */
+  notOutYet: z.number().int(),
+});
+export type UpNext = z.infer<typeof upNext>;
 
 /* ─────────────────────────────── series ─────────────────────────────── */
 
@@ -216,6 +280,13 @@ export const searchResult = workSummary.extend({
    *  "have I already watched this?" without a second round trip. */
   inLibrary: z.boolean(),
   libraryStatus: watchState.nullable(),
+  /**
+   * Episodes watched, when it is already held.
+   *
+   * Without it a result can say "you have this" but not where you are, so
+   * acting on it means opening something else to find out.
+   */
+  libraryProgress: z.number().int().nullable(),
 });
 export type SearchResult = z.infer<typeof searchResult>;
 

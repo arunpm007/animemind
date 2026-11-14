@@ -14,12 +14,12 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.ts",
     "db:studio": "drizzle-kit studio",
-    "spine": "tsx scripts/spine-report.ts",
-    "seed": "tsx scripts/seed.ts",
-    "backfill-art": "tsx scripts/backfill-art.mts",
-    "dedupe:works": "tsx scripts/dedupe.mts"
+    "spine": "tsx --env-file-if-exists=.env.local scripts/spine-report.ts",
+    "seed": "tsx --env-file-if-exists=.env.local scripts/seed.ts",
+    "backfill-art": "tsx --env-file-if-exists=.env.local scripts/backfill-art.mts",
+    "dedupe:works": "tsx --env-file-if-exists=.env.local scripts/dedupe.mts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",
