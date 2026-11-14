@@ -117,7 +117,21 @@ export const librarySeriesEntry = z.object({
     })
     .nullable(),
 
-  /** True when a later entry has aired and is not in the library yet. */
+  /**
+   * Spine entries that have aired and are NOT in the library.
+   *
+   * The count alone ("2 of 4") tells someone something is missing without
+   * telling them what, which is the half of the message that is useless.
+   */
+  missingEntries: z.array(
+    z.object({
+      workId: z.string(),
+      title: z.string(),
+      ord: z.number().int().nullable(),
+      status: releaseStatus,
+    }),
+  ),
+  /** True when any of the above has already aired. */
   hasUnwatchedNext: z.boolean(),
   lastWatchedAt: instant.nullable(),
 });

@@ -347,10 +347,18 @@ export async function listLibrarySeries(
     // to be added first.
     const root = spine[0]?.w ?? mine[0].w;
 
-    const hasUnwatchedNext = spine.some(
-      (m) =>
-        !ownedByWork.has(m.w.id) &&
-        (m.w.releaseStatus === 'finished' || m.w.releaseStatus === 'airing'),
+    // Name the gaps, do not just count them.
+    const missingEntries = spine
+      .filter((m) => !ownedByWork.has(m.w.id))
+      .map((m) => ({
+        workId: m.w.id,
+        title: m.w.titleEnglish ?? m.w.titleRomaji,
+        ord: m.m.spineOrd,
+        status: m.w.releaseStatus,
+      }));
+
+    const hasUnwatchedNext = missingEntries.some(
+      (m) => m.status === 'finished' || m.status === 'airing',
     );
 
     out.push({
@@ -374,6 +382,7 @@ export async function listLibrarySeries(
             total: cursor.w.episodeCount,
           }
         : null,
+      missingEntries,
       hasUnwatchedNext,
       lastWatchedAt:
         states

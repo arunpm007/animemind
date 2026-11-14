@@ -127,4 +127,15 @@ describe('listLibrarySeries', () => {
     );
     expect(row.hasUnwatchedNext).toBe(true);
   });
+
+  it('NAMES what is missing, not just how many', async () => {
+    // "2 of 4" tells someone something is absent without telling them what,
+    // which is the half of the message they can act on.
+    const [row] = (await listLibrarySeries(actor)).filter((r) =>
+      r.title.startsWith('Grouping Test'),
+    );
+    expect(row.missingEntries).toHaveLength(1);
+    expect(row.missingEntries[0].title).toBe('Grouping Test S4');
+    expect(row.missingEntries[0].ord).toBe(4);
+  });
 });

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Sparkles, Star } from 'lucide-react';
+import { Plus, Sparkles, Star } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { Empty, Poster, PosterGrid } from '@/components/ui/primitives';
 import { listLibrarySeries } from '@/server/services/library';
@@ -126,6 +126,28 @@ export default async function LibraryPage() {
                       </span>
                     ) : null}
                   </p>
+
+                  {/* Name what is missing. A count on its own tells someone
+                      that something is absent without telling them what,
+                      which is the half of the message that cannot be acted
+                      on. */}
+                  {e.missingEntries.length > 0 ? (
+                    <Link
+                      href={`/series/${e.slug}`}
+                      className="group/missing mt-0.5 flex items-start gap-1 text-[11px] text-[var(--color-dim)] hover:text-[var(--color-text)]"
+                    >
+                      <Plus className="mt-[2px] size-2.5 shrink-0 opacity-70" />
+                      <span className="line-clamp-2 leading-snug">
+                        {e.missingEntries
+                          .slice(0, 2)
+                          .map((m) => m.title)
+                          .join(', ')}
+                        {e.missingEntries.length > 2
+                          ? ` +${e.missingEntries.length - 2} more`
+                          : ''}
+                      </span>
+                    </Link>
+                  ) : null}
                 </div>
               </div>
             ))}

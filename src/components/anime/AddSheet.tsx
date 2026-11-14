@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { ArrowRight, Check, Loader2 } from 'lucide-react';
+import { ArrowRight, Check, CornerDownRight, Loader2 } from 'lucide-react';
 import type { LibraryEntry, SearchResult, WatchStateDto } from '@/contracts';
 import { api, ApiRequestError } from '@/lib/api';
 import { makeOp } from '@/lib/op';
@@ -24,16 +24,40 @@ import { PosterImage } from '@/components/ui/PosterImage';
  * for, then offers the series page, where every season is editable.
  */
 
+/**
+ * Each choice says WHERE the title will turn up.
+ *
+ * "Plan to watch" and "On hold" are abstract until you know what they do to
+ * the app. Naming the destination turns a form into an explanation, and it is
+ * the cheapest way to teach the four screens — people learn the structure by
+ * filing one thing.
+ */
 const CHOICES: Array<{
   value: WatchStateDto;
   label: string;
   hint: string;
+  destination: string;
 }> = [
-  { value: 'planned', label: 'Plan to watch', hint: "Haven't started it" },
-  { value: 'watching', label: 'Currently watching', hint: 'Partway through' },
-  { value: 'completed', label: 'Already watched', hint: 'Seen all of it' },
-  { value: 'on_hold', label: 'On hold', hint: 'Paused' },
-  { value: 'dropped', label: 'Dropped', hint: 'Not continuing' },
+  {
+    value: 'planned',
+    label: 'Plan to watch',
+    hint: "Haven't started it",
+    destination: 'Library',
+  },
+  {
+    value: 'watching',
+    label: 'Currently watching',
+    hint: 'Partway through',
+    destination: 'Today → Continue watching',
+  },
+  {
+    value: 'completed',
+    label: 'Already watched',
+    hint: 'Seen all of it',
+    destination: 'Library · and Waiting, if a sequel is coming',
+  },
+  { value: 'on_hold', label: 'On hold', hint: 'Paused', destination: 'Library' },
+  { value: 'dropped', label: 'Dropped', hint: 'Not continuing', destination: 'Library' },
 ];
 
 export function AddSheet({
@@ -138,12 +162,16 @@ export function AddSheet({
         {savedSlug !== undefined ? (
           /* ── saved ── */
           <div className="p-5">
-            <div className="mb-4 flex items-center gap-2 text-sm">
+            <div className="mb-3 flex items-center gap-2 text-sm">
               <span className="flex size-5 items-center justify-center rounded-full bg-[var(--color-airing)]/20">
                 <Check className="size-3 text-[var(--color-airing)]" />
               </span>
               Added to your library.
             </div>
+            <p className="mb-4 flex items-center gap-1.5 text-[13px] text-[var(--color-accent-soft)]">
+              <CornerDownRight className="size-3" />
+              Find it in {CHOICES.find((c) => c.value === choice)?.destination}
+            </p>
             <p className="mb-4 text-[13px] leading-relaxed text-[var(--color-dim)]">
               {savedSlug
                 ? 'Other seasons, films and OVAs are on the series page — you can set where you are with each of them there.'
@@ -202,8 +230,20 @@ export function AddSheet({
                         <span className="size-2 rounded-full bg-[var(--color-accent)]" />
                       ) : null}
                     </span>
-                    <span className="flex-1 text-[13px]">{c.label}</span>
-                    <span className="text-[11px] text-[var(--color-mute)]">{c.hint}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px]">{c.label}</span>
+                      {/* Only the active choice explains itself — showing five
+                          destinations at once is noise, not guidance. */}
+                      {choice === c.value ? (
+                        <span className="mt-0.5 flex items-center gap-1 text-[11px] text-[var(--color-accent-soft)]">
+                          <CornerDownRight className="size-2.5" />
+                          Appears in {c.destination}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="shrink-0 text-[11px] text-[var(--color-mute)]">
+                      {c.hint}
+                    </span>
                   </button>
                 ))}
               </div>

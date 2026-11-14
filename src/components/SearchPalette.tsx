@@ -158,7 +158,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
           </p>
         ) : null}
 
-        <div className="max-h-[52vh] overflow-y-auto">
+        <div className="max-h-[58vh] overflow-y-auto">
           {error ? (
             <p className="px-4 py-8 text-center text-sm text-[var(--color-dim)]">
               {error}
@@ -189,59 +189,89 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
             )
           ) : null}
 
-          {q.trim().length >= 2 ? results.map((r, i) => {
-            const owned = r.inLibrary || added.has(r.id);
-            return (
-              <div
-                key={r.id}
-                onMouseEnter={() => setCursor(i)}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 transition-colors duration-[160ms]',
-                  i === cursor && 'bg-[var(--color-overlay)]',
-                )}
-              >
-                <div className="relative h-14 w-[38px] shrink-0 overflow-hidden rounded-[3px] bg-[var(--color-raised)]">
-                  {/* Not a raw next/image: it THROWS on a host missing from
-                      remotePatterns, which takes the whole page down. Adding a
-                      provider should never be able to do that. */}
-                  <PosterImage src={r.coverUrl} title={r.title} sizes="38px" />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{r.title}</p>
-                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[var(--color-mute)]">
-                    <span className="uppercase">{r.kind}</span>
-                    {r.episodeCount ? <span>· {r.episodeCount} eps</span> : null}
-                    {r.seasonYear ? <span>· {r.seasonYear}</span> : null}
-                    <StatusDot status={r.status} short />
-                  </div>
-                </div>
-
-                {owned ? (
-                  // The answer to the question that started this project.
-                  <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--color-airing)]/30 px-2.5 py-1 text-[11px] text-[var(--color-airing)]">
-                    <Check className="size-3" />
-                    In your library
-                  </span>
-                ) : (
+          {q.trim().length >= 2
+            ? results.map((r, i) => {
+                const owned = r.inLibrary || added.has(r.id);
+                const state = r.libraryStatus;
+                return (
+                  // The whole row is the target. A 70px button was the only
+                  // way in, which made a list of large posters feel inert.
                   <button
+                    key={r.id}
                     type="button"
+                    onMouseEnter={() => setCursor(i)}
                     onClick={() => add(r)}
-                    className="flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--color-accent)] px-3 py-1.5 text-[11px] font-medium text-white transition-transform duration-[160ms] ease-[var(--ease-state)] active:scale-95"
+                    className={cn(
+                      'flex w-full items-center gap-3.5 px-3 py-3 text-left transition-colors duration-[160ms]',
+                      i === cursor
+                        ? 'bg-[var(--color-overlay)]'
+                        : 'hover:bg-[var(--color-surface)]',
+                    )}
                   >
-                    <Plus className="size-3" />
-                    Add
+                    <div className="relative h-[72px] w-[50px] shrink-0 overflow-hidden rounded-[5px] bg-[var(--color-raised)] shadow-[var(--edge-light),var(--shadow-1)]">
+                      {/* Not a raw next/image: it THROWS on a host missing
+                          from remotePatterns, taking the whole page down. */}
+                      <PosterImage src={r.coverUrl} title={r.title} sizes="50px" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[14px] leading-snug font-medium">
+                        {r.title}
+                      </p>
+                      {/* The original title, when it differs — half of
+                          searching is recognising the name you knew it by. */}
+                      {r.titleEnglish && r.titleEnglish !== r.title ? (
+                        <p className="truncate text-[11px] text-[var(--color-mute)]">
+                          {r.titleEnglish}
+                        </p>
+                      ) : null}
+
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[var(--color-mute)]">
+                        <span className="rounded bg-[var(--color-surface)] px-1.5 py-0.5 uppercase">
+                          {r.kind}
+                        </span>
+                        {r.seasonYear ? <span>{r.seasonYear}</span> : null}
+                        {r.episodeCount ? <span>· {r.episodeCount} eps</span> : null}
+                        <StatusDot status={r.status} short />
+                      </div>
+                    </div>
+
+                    <span className="shrink-0">
+                      {owned ? (
+                        // The answer to the question that started this
+                        // project — and it names the state, because "already
+                        // in there somewhere" is not what anyone wants to know.
+                        <span className="flex items-center gap-1.5 rounded-full border border-[var(--color-airing)]/30 bg-[var(--color-airing)]/10 px-2.5 py-1 text-[11px] text-[var(--color-airing)]">
+                          <Check className="size-3" />
+                          {state === 'watching'
+                            ? 'Watching'
+                            : state === 'completed'
+                              ? 'Watched'
+                              : state === 'planned'
+                                ? 'Planned'
+                                : state === 'on_hold'
+                                  ? 'On hold'
+                                  : state === 'dropped'
+                                    ? 'Dropped'
+                                    : 'In library'}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 rounded-full bg-[var(--color-accent)] px-3 py-1.5 text-[11px] font-medium text-white">
+                          <Plus className="size-3" />
+                          Add
+                        </span>
+                      )}
+                    </span>
                   </button>
-                )}
-              </div>
-            );
-          }) : null}
+                );
+              })
+            : null}
         </div>
 
         {q.trim().length >= 2 && results.length > 0 ? (
           <div className="flex items-center gap-3 border-t border-[var(--color-border)] px-4 py-2 text-[10px] text-[var(--color-mute)]">
             <span>↑↓ navigate</span>
-            <span>↵ add</span>
+            <span>↵ choose</span>
             <span>esc close</span>
           </div>
         ) : null}
