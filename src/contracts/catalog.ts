@@ -158,6 +158,21 @@ export const seriesDetail = z.object({
   id: z.string(),
   slug: z.string(),
   title: z.string(),
+
+  /** What the show is about, from the first entry. */
+  synopsis: z.string().nullable(),
+  genres: z.array(z.string()),
+  studios: z.array(z.string()),
+  year: z.number().int().nullable(),
+
+  /**
+   * The relation walk has not finished, so the structure below is incomplete.
+   *
+   * A series row is written before its members are known, so for a few seconds
+   * after adding a title the page would render an empty "main story" — which
+   * reads as a broken page rather than as work in progress.
+   */
+  hydrating: z.boolean(),
   /**
    * True when the franchise has parallel retellings and cannot honestly be
    * reduced to one order. A client MUST render a story-line switcher and MUST

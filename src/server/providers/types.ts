@@ -81,6 +81,15 @@ export interface AnimeProvider {
   getWork(providerId: string): Promise<RawWork>;
   getRelations(providerId: string): Promise<RawRelation[]>;
   getEpisodes(providerId: string): Promise<RawEpisode[]>;
+
+  /**
+   * This work's ids at OTHER providers, when the provider publishes them.
+   *
+   * Optional because only some do. Without it the catalog keeps one row per
+   * provider for the same anime, and a library built on one provider cannot
+   * recognise a title it already holds under another.
+   */
+  getExternalIds?(providerId: string): Promise<Array<{ site: string; externalId: string }>>;
 }
 
 /** Thrown when a provider is reachable but cannot serve — distinct from a bug. */

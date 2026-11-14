@@ -197,6 +197,33 @@ export const episode = pgTable(
   (t) => [uniqueIndex('episode_uq').on(t.workId, t.number)],
 );
 
+/**
+ * Cross-provider identity.
+ *
+ * The same anime exists under a different id at every provider, so without
+ * this the catalog holds one row per provider per title. A library seeded from
+ * one provider then shows "Add" for a title the user has already finished,
+ * because the ids never meet — the worst answer this product can give.
+ *
+ * The primary key is (site, external_id), NOT (work_id, site): it is a global
+ * claim. Two works cannot both say they are MyAnimeList 16498, and an attempt
+ * to do so raises a conflict that ingestion resolves by merging them.
+ */
+export const workExternalId = pgTable(
+  'work_external_id',
+  {
+    site: text('site').notNull(),
+    externalId: text('external_id').notNull(),
+    workId: uuid('work_id')
+      .notNull()
+      .references(() => work.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.site, t.externalId] }),
+    index('external_work_idx').on(t.workId),
+  ],
+);
+
 /** Raw provider responses, so development and retries cost no rate budget. */
 export const providerCache = pgTable('provider_cache', {
   url: text('url').primaryKey(),

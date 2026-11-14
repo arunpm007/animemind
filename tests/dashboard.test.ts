@@ -100,7 +100,6 @@ describe('getDashboard', () => {
   });
 
   it('still links the owned rows it always did', async () => {
-    const db = unscoped();
     await asUser(actor.userId, async (tx) => {
       await tx
         .update(userWork)
@@ -117,6 +116,5 @@ describe('getDashboard', () => {
         .set({ status: 'completed', progress: 12 })
         .where(eq(userWork.workId, ids[0]));
     });
-    expect(db).toBeTruthy();
   });
 });

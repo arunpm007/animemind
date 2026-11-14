@@ -268,6 +268,31 @@ export class KitsuProvider implements AnimeProvider {
     return out;
   }
 
+  /**
+   * Kitsu publishes this title's ids at MyAnimeList, AniList, AniDB and
+   * others, which is what lets rows from different providers be recognised as
+   * one anime. Cached for a week — these effectively never change.
+   */
+  async getExternalIds(
+    providerId: string,
+  ): Promise<Array<{ site: string; externalId: string }>> {
+    const { data } = await this.get<{
+      data: Array<{ attributes: { externalSite?: string; externalId?: string } }>;
+    }>(`/anime/${providerId}/mappings?page%5Blimit%5D=20`, 7 * 24 * 60 * 60 * 1000);
+
+    const out: Array<{ site: string; externalId: string }> = [
+      // Its own id counts: a second Kitsu row for the same title would
+      // otherwise be invisible to the identity check.
+      { site: 'kitsu', externalId: providerId },
+    ];
+    for (const m of data?.data ?? []) {
+      const site = m.attributes?.externalSite;
+      const id = m.attributes?.externalId;
+      if (site && id) out.push({ site, externalId: String(id) });
+    }
+    return out;
+  }
+
   async getEpisodes(providerId: string): Promise<RawEpisode[]> {
     const out: RawEpisode[] = [];
     let offset = 0;

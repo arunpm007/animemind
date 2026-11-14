@@ -111,6 +111,7 @@ export default async function SeriesPage({
             <h1 className="t-display mb-4">{series.title}</h1>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[var(--color-dim)]">
               {series.releaseSummary.airing ? <StatusDot status="airing" /> : null}
+              {series.year ? <span className="tnum">{series.year}</span> : null}
               <span className="tnum">
                 {series.spine.length}{' '}
                 {series.spine.length === 1 ? 'entry' : 'entries'} in the main story
@@ -119,8 +120,52 @@ export default async function SeriesPage({
                 <span className="tnum">{series.extras.length} extra</span>
               ) : null}
             </div>
+
+            {series.genres.length > 0 || series.studios.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {series.genres.slice(0, 5).map((g) => (
+                  <span
+                    key={g}
+                    className="rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[11px] text-[var(--color-dim)]"
+                  >
+                    {g}
+                  </span>
+                ))}
+                {series.studios.slice(0, 2).map((st) => (
+                  <span key={st} className="px-1 py-0.5 text-[11px] text-[var(--color-mute)]">
+                    {st}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
         </header>
+
+        {/* What the show is actually about — there was previously no way to
+            find this out anywhere in the app. */}
+        {series.synopsis ? (
+          <p className="rise mb-10 max-w-2xl text-[13px] leading-relaxed text-[var(--color-dim)]">
+            {series.synopsis.length > 420
+              ? `${series.synopsis.slice(0, 420).trimEnd()}…`
+              : series.synopsis}
+          </p>
+        ) : null}
+
+        {/* Members are written after the series row, so an empty spine just
+            after an add means the walk is still running. Saying nothing here
+            renders a blank "main story" that reads as a broken page. */}
+        {series.hydrating ? (
+          <div className="pane rise mb-10 flex items-center gap-3 rounded-xl p-4">
+            <span className="size-3 shrink-0 animate-spin rounded-full border-2 border-[var(--color-border-strong)] border-t-[var(--color-accent)]" />
+            <div>
+              <p className="text-sm font-medium">Working out the seasons…</p>
+              <p className="text-[12px] text-[var(--color-dim)]">
+                Reading this franchise&apos;s structure. Refresh in a moment.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
 
         {/* ── the honest answer when there isn't one ── */}
         {series.ambiguous ? (
@@ -289,31 +334,69 @@ export default async function SeriesPage({
           {TRACK_ORDER.filter((t) => grouped.has(t)).map((t) => (
             <Section key={t} title={TRACK_LABEL[t]}>
               <div className="stagger flex flex-col gap-2">
-                {grouped.get(t)!.map((e) => (
-                  <article
-                    key={e.work.id}
-                    className="flex items-center gap-3 rounded-lg px-1 py-1.5"
-                  >
-                    <div className="w-[44px] shrink-0">
-                      <Poster work={e.work} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm">{e.work.title}</p>
-                      <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[var(--color-mute)]">
-                        <span className="uppercase">{e.work.kind}</span>
-                        {e.work.startDate ? <span>· {e.work.startDate.slice(0, 4)}</span> : null}
-                        {t === 'recap' ? (
-                          <span className="text-[var(--color-mute)]">· skippable</span>
+                {grouped.get(t)!.map((e) => {
+                  const ep = e.progress;
+                  const unaired = e.work.status === 'not_yet_aired';
+                  return (
+                    <article
+                      key={e.work.id}
+                      className="flex items-center gap-3 rounded-lg px-1 py-1.5"
+                    >
+                      <div className="w-[44px] shrink-0">
+                        <Poster work={e.work} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm">{e.work.title}</p>
+                        <div className="mt-0.5 flex items-center gap-2 text-[11px] text-[var(--color-mute)]">
+                          <span className="uppercase">{e.work.kind}</span>
+                          {e.work.startDate ? (
+                            <span>· {e.work.startDate.slice(0, 4)}</span>
+                          ) : null}
+                          {e.work.episodeCount ? (
+                            <span>· {e.work.episodeCount} eps</span>
+                          ) : null}
+                          {t === 'recap' ? <span>· skippable</span> : null}
+                        </div>
+                        {/* Films and OVAs are watched like anything else, so
+                            they get the same progress control once owned. */}
+                        {ep && !unaired ? (
+                          <div className="mt-1.5 max-w-xs">
+                            <EpisodeProgress
+                              workId={e.work.id}
+                              progress={ep.progress}
+                              total={e.work.episodeCount}
+                              pass={ep.rewatchCount + 1 + (ep.rewatching ? 1 : 0)}
+                              status={ep.status}
+                            />
+                          </div>
                         ) : null}
                       </div>
-                    </div>
-                    {e.progress?.status === 'completed' ? (
-                      <span className="shrink-0 text-[11px] text-[var(--color-airing)]">
-                        watched
-                      </span>
-                    ) : null}
-                  </article>
-                ))}
+
+                      {/* Extras were previously inert — no link, no button,
+                          nothing. A film you want to watch next was as
+                          unreachable as a line of printed text. */}
+                      {unaired ? (
+                        <span className="shrink-0 text-[11px] text-[var(--color-mute)]">
+                          not out yet
+                        </span>
+                      ) : ep ? (
+                        <StatusControl
+                          workId={e.work.id}
+                          status={ep.status}
+                          progress={ep.progress}
+                          total={e.work.episodeCount}
+                          rewatching={ep.rewatching}
+                          rewatchCount={ep.rewatchCount}
+                          favorite={ep.favorite}
+                          rating={ep.rating}
+                          notes={ep.notes}
+                        />
+                      ) : (
+                        <AddButton workId={e.work.id} label="Add" />
+                      )}
+                    </article>
+                  );
+                })}
               </div>
             </Section>
           ))}

@@ -18,6 +18,7 @@ import { KitsuProvider } from '../providers/kitsu';
 import { MalProvider } from '../providers/mal';
 import type { AnimeProvider, RawWork } from '../providers/types';
 import type { CacheAdapter } from '../providers/http';
+import { reconcileIdentity, resolveWorkId } from './identity';
 
 /**
  * Ingestion: provider -> normalised rows -> derived series.
@@ -180,9 +181,14 @@ export async function upsertWork(
   const db = unscoped();
   const next = rowFrom(w, providerId);
 
-  const existing = await db.query.work.findFirst({
-    where: and(eq(work.provider, providerId), eq(work.providerId, w.providerId)),
-  });
+  // Resolve through identity, not just (provider, providerId). After a merge
+  // the surviving row carries the other provider's id, and a plain lookup
+  // would miss it and insert a duplicate — undoing the merge on the next
+  // search.
+  const existingId = await resolveWorkId(providerId, w.providerId);
+  const existing = existingId
+    ? await db.query.work.findFirst({ where: eq(work.id, existingId) })
+    : undefined;
 
   if (!existing) {
     const [row] = await db.insert(work).values(next).returning({ id: work.id });
@@ -500,15 +506,45 @@ export async function ensureWork(
   providerWorkId: string,
   provider: AnimeProvider = defaultProvider(),
 ): Promise<string> {
-  const db = unscoped();
-  const existing = await db.query.work.findFirst({
-    where: and(eq(work.provider, provider.id), eq(work.providerId, providerWorkId)),
-  });
-  if (existing) return existing.id;
+  const existingId = await resolveWorkId(provider.id, providerWorkId);
+  if (existingId) return existingId;
 
   const raw = await provider.getWork(providerWorkId);
   const { id } = await upsertWork(raw, provider.id);
-  return id;
+  // May return a DIFFERENT id: this title can already exist under another
+  // provider, in which case the two rows are merged and the older one wins.
+  return registerIdentity(id, providerWorkId, provider);
+}
+
+/**
+ * Claim this work's cross-provider ids, merging with any existing row.
+ *
+ * Best-effort on purpose. Identity makes the catalog tidier; it is not worth
+ * failing an add over, so a provider that cannot answer leaves the work exactly
+ * as it was.
+ */
+export async function registerIdentity(
+  workId: string,
+  providerWorkId: string,
+  provider: AnimeProvider = defaultProvider(),
+): Promise<string> {
+  try {
+    const ids = provider.getExternalIds
+      ? await provider.getExternalIds(providerWorkId)
+      : [];
+
+    // A Jikan row IS a MyAnimeList row — stating that is what lets it meet a
+    // Kitsu row that maps to the same MyAnimeList id.
+    if (provider.id === 'jikan' || provider.id === 'mal') {
+      ids.push({ site: 'myanimelist', externalId: providerWorkId });
+    }
+    if (!ids.length) return workId;
+
+    return await reconcileIdentity(workId, ids);
+  } catch (err) {
+    console.warn(`identity registration failed for ${workId}:`, err);
+    return workId;
+  }
 }
 
 /* ───────────────────── background hydration ───────────────────── */

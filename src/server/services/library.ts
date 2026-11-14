@@ -494,10 +494,22 @@ export async function getSeries(
   );
   const airing = spineRows.some((r) => r.w.releaseStatus === 'airing');
 
+  // Franchise-level description comes from the first entry — the one the
+  // title refers to.
+  const descriptive = spineRows[0]?.w ?? members[0]?.w;
+
   return {
     id: s.id,
     slug: s.slug,
     title: s.title,
+    synopsis: descriptive?.synopsis ?? null,
+    genres: descriptive?.genres ?? [],
+    studios: descriptive?.studios ?? [],
+    year: descriptive?.seasonYear ?? null,
+    // Members are written after the series row, so an empty spine shortly
+    // after an add means the walk is still running, not that the show has no
+    // seasons.
+    hydrating: spineRows.length === 0 && !(descriptive?.relationsHydrated ?? false),
     ambiguous: s.ambiguous || Boolean(diagnostics.ambiguous),
     spine: spineRows.map((r) => ({
       ord: r.ord,

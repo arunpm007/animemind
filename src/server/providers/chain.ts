@@ -70,4 +70,19 @@ export class ChainProvider implements AnimeProvider {
   getEpisodes(providerId: string): Promise<RawEpisode[]> {
     return this.attempt('getEpisodes', (p) => p.getEpisodes(providerId));
   }
+
+  async getExternalIds(
+    providerId: string,
+  ): Promise<Array<{ site: string; externalId: string }>> {
+    // Only the provider that owns this id space can answer. Asking a fallback
+    // about an id from another provider returns a different show.
+    const primary = this.providers[0];
+    if (!primary.getExternalIds) return [];
+    try {
+      return await primary.getExternalIds(providerId);
+    } catch {
+      // Identity is an optimisation; failing to fetch it must not fail ingest.
+      return [];
+    }
+  }
 }
