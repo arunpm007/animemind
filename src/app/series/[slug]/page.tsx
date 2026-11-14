@@ -4,8 +4,8 @@ import { AlertCircle, Play, RotateCcw } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { AddButton } from '@/components/anime/AddButton';
 import { StatusControl } from '@/components/anime/StatusControl';
-import { EpisodeStepper } from '@/components/anime/EpisodeStepper';
-import { Poster, ProgressBar, Section, StatusDot } from '@/components/ui/primitives';
+import { EpisodeProgress } from '@/components/anime/EpisodeProgress';
+import { Poster, Section, StatusDot } from '@/components/ui/primitives';
 import type { ExtraEntry, TrackDto } from '@/contracts';
 import { getSeries } from '@/server/services/library';
 import { requireActor } from '@/lib/session';
@@ -237,24 +237,17 @@ export default async function SeriesPage({
                         </div>
 
                         {unaired ? null : p ? (
-                          <div className="flex shrink-0 items-center gap-2">
-                            <StatusControl
-                              workId={entry.work.id}
-                              status={p.status}
-                              progress={p.progress}
-                              total={entry.work.episodeCount}
-                              rewatching={p.rewatching}
-                              rewatchCount={p.rewatchCount}
-                              favorite={p.favorite}
-                              rating={p.rating}
-                            />
-                            <EpisodeStepper
-                              workId={entry.work.id}
-                              progress={p.progress}
-                              total={entry.work.episodeCount}
-                              pass={p.rewatchCount + 1 + (p.rewatching ? 1 : 0)}
-                            />
-                          </div>
+                          <StatusControl
+                            workId={entry.work.id}
+                            status={p.status}
+                            progress={p.progress}
+                            total={entry.work.episodeCount}
+                            rewatching={p.rewatching}
+                            rewatchCount={p.rewatchCount}
+                            favorite={p.favorite}
+                            rating={p.rating}
+                            notes={p.notes}
+                          />
                         ) : (
                           // Not in the library yet — this is the control that
                           // lets "next season" actually be started.
@@ -264,10 +257,13 @@ export default async function SeriesPage({
 
                       {!unaired ? (
                         p ? (
-                          <div className="mt-2.5 max-w-sm">
-                            <ProgressBar
-                              value={p.progress}
+                          <div className="mt-2.5 max-w-md">
+                            <EpisodeProgress
+                              workId={entry.work.id}
+                              progress={p.progress}
                               total={entry.work.episodeCount}
+                              pass={p.rewatchCount + 1 + (p.rewatching ? 1 : 0)}
+                              status={p.status}
                             />
                           </div>
                         ) : (

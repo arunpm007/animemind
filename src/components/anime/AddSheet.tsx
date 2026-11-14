@@ -3,10 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { ArrowRight, Check, Loader2 } from 'lucide-react';
-import { ulid } from 'ulid';
 import type { LibraryEntry, SearchResult, WatchStateDto } from '@/contracts';
 import { api, ApiRequestError } from '@/lib/api';
-import { deviceId } from '@/lib/device';
+import { makeOp } from '@/lib/op';
 import { cn } from '@/lib/cn';
 import { PosterImage } from '@/components/ui/PosterImage';
 
@@ -81,24 +80,11 @@ export function AddSheet({
       const ops = [];
       if (choice === 'watching') {
         const n = Math.max(0, Number(episode) || 0);
-        ops.push({
-          id: ulid(),
-          clientTs: Date.now(),
-          deviceId: deviceId(),
-          t: 'set_progress' as const,
-          workId: result.id,
-          pass: 1,
-          value: n,
-        });
+        ops.push(
+          makeOp({ t: 'set_progress', workId: result.id, pass: 1, value: n }),
+        );
       } else if (choice === 'completed') {
-        ops.push({
-          id: ulid(),
-          clientTs: Date.now(),
-          deviceId: deviceId(),
-          t: 'complete' as const,
-          workId: result.id,
-          pass: 1,
-        });
+        ops.push(makeOp({ t: 'complete', workId: result.id, pass: 1 }));
       }
       if (ops.length) await api.post('/sync', { ops });
 
@@ -234,6 +220,7 @@ export function AddSheet({
                       id="ep"
                       value={episode}
                       inputMode="numeric"
+                      onFocus={(e) => e.currentTarget.select()}
                       onChange={(e) => setEpisode(e.target.value.replace(/\D/g, ''))}
                       className="tnum w-20 rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--color-accent)]"
                     />

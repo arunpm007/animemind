@@ -1,14 +1,8 @@
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
-import { EpisodeStepper } from '@/components/anime/EpisodeStepper';
-import {
-  Empty,
-  Poster,
-  ProgressBar,
-  Section,
-  StatusDot,
-} from '@/components/ui/primitives';
+import { EpisodeProgress } from '@/components/anime/EpisodeProgress';
+import { Empty, Poster, Section, StatusDot } from '@/components/ui/primitives';
 import { getDashboard } from '@/server/services/library';
 import { requireActor } from '@/lib/session';
 
@@ -136,10 +130,17 @@ export default async function TodayPage() {
                           item.work.title
                         )}
                       </p>
-                      <div className="mt-1.5 max-w-xs">
-                        <ProgressBar
-                          value={item.progress.progress}
+                      <div className="mt-1.5 max-w-sm">
+                        <EpisodeProgress
+                          workId={item.work.id}
+                          progress={item.progress.progress}
                           total={item.work.episodeCount}
+                          pass={
+                            item.progress.rewatchCount +
+                            1 +
+                            (item.progress.rewatching ? 1 : 0)
+                          }
+                          status={item.progress.status}
                         />
                       </div>
                       {item.progress.rewatching ? (
@@ -149,16 +150,6 @@ export default async function TodayPage() {
                       ) : null}
                     </div>
 
-                    <EpisodeStepper
-                      workId={item.work.id}
-                      progress={item.progress.progress}
-                      total={item.work.episodeCount}
-                      pass={
-                        item.progress.rewatchCount +
-                        1 +
-                        (item.progress.rewatching ? 1 : 0)
-                      }
-                    />
                   </article>
                 ))}
               </div>
