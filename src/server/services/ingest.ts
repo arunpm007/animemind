@@ -290,7 +290,15 @@ export async function hydrateRelations(
         // branch never fires and each neighbour costs one call — which is the
         // whole reason hydration is budgeted and backgrounded.
         const hint = rel.hint;
-        if (hint?.kind && hint.title) {
+        if (hint?.work) {
+          // A complete record arrived with the relation — use it verbatim.
+          const { id } = await upsertWork(hint.work, provider.id);
+          discovered += 1;
+          toRow = await db.query.work.findFirst({ where: eq(work.id, id) });
+        } else if (hint?.kind && hint.title) {
+          // Only a partial hint. Enough to place the work in the series, but
+          // it will be filled in properly by the next refresh — so mark it due
+          // immediately rather than leaving a thin row for a month.
           const { id } = await upsertWork(
             {
               providerId: rel.providerId,
@@ -319,6 +327,7 @@ export async function hydrateRelations(
             },
             provider.id,
           );
+          await db.update(work).set({ nextSyncAt: new Date() }).where(eq(work.id, id));
           discovered += 1;
           toRow = await db.query.work.findFirst({ where: eq(work.id, id) });
         } else if (level < depth && fetched < budget) {

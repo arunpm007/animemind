@@ -37,12 +37,21 @@ export interface RawWork {
 export interface RawRelation {
   kind: RelationKind;
   providerId: string;
-  /** Present when the provider inlines it; absent means a follow-up fetch. */
+  /**
+   * Present when the provider inlines it; absent means a follow-up fetch.
+   *
+   * `work` is a COMPLETE normalised record, which some providers (Kitsu) give
+   * for free in the same payload. Carrying only a few fields instead meant
+   * every neighbour discovered this way was created without cover art —
+   * 73 of 73 such works had no poster — while the art sat unread in the
+   * response we had already paid for.
+   */
   hint?: {
     kind?: WorkKind;
     title?: string;
     releaseStatus?: ReleaseStatus;
     startDate?: string | null;
+    work?: RawWork;
   };
 }
 

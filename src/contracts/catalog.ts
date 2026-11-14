@@ -80,6 +80,49 @@ export const libraryEntry = z.object({
 });
 export type LibraryEntry = z.infer<typeof libraryEntry>;
 
+/**
+ * One row per SERIES in the library, not one per entry.
+ *
+ * Listing entries meant Attack on Titan appeared six times — a wall of nearly
+ * identical posters that reads as duplication rather than as seasons. The
+ * franchise is the thing a person has an opinion about; the seasons are its
+ * contents, and they belong on the series page.
+ */
+export const librarySeriesEntry = z.object({
+  seriesId: z.string(),
+  slug: z.string(),
+  title: z.string(),
+  coverUrl: z.string().nullable(),
+  accentHex: z.string().nullable(),
+
+  /** Entries on the main story line, whether or not they are in the library. */
+  totalEntries: z.number().int(),
+  /** How many of those the user actually tracks. */
+  ownedEntries: z.number().int(),
+  completedEntries: z.number().int(),
+
+  /** Derived from the entries — see deriveSeriesStatus. */
+  status: watchState,
+  favorite: z.boolean(),
+  rating: z.number().int().nullable(),
+
+  /** Where the user is right now, if anywhere. */
+  current: z
+    .object({
+      workId: z.string(),
+      title: z.string(),
+      ord: z.number().int().nullable(),
+      progress: z.number().int(),
+      total: z.number().int().nullable(),
+    })
+    .nullable(),
+
+  /** True when a later entry has aired and is not in the library yet. */
+  hasUnwatchedNext: z.boolean(),
+  lastWatchedAt: instant.nullable(),
+});
+export type LibrarySeriesEntry = z.infer<typeof librarySeriesEntry>;
+
 /* ─────────────────────────────── series ─────────────────────────────── */
 
 export const spineEntry = z.object({

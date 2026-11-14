@@ -250,13 +250,17 @@ export class KitsuProvider implements AnimeProvider {
       out.push({
         kind,
         providerId: ptr.id,
-        // The payoff: enough to classify this neighbour without fetching it.
-        hint: a
+        // The payoff: an `included` node carries the same attributes as a full
+        // anime record — art, episode count, dates — so the neighbour can be
+        // normalised outright rather than stubbed. No extra request, and no
+        // posterless placeholder left behind.
+        hint: node
           ? {
-              title: a.titles?.en_jp || a.canonicalTitle,
-              kind: a.subtype ? KIND[a.subtype] : undefined,
-              releaseStatus: a.status ? STATUS[a.status] : undefined,
-              startDate: day(a.startDate),
+              title: a?.titles?.en_jp || a?.canonicalTitle,
+              kind: a?.subtype ? KIND[a.subtype] : undefined,
+              releaseStatus: a?.status ? STATUS[a.status] : undefined,
+              startDate: day(a?.startDate),
+              work: normaliseKitsuWork(node),
             }
           : undefined,
       });

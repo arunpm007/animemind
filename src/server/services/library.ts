@@ -3,6 +3,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import type {
   Dashboard,
   LibraryEntry,
+  LibrarySeriesEntry,
   SearchResult,
   SeriesDetail,
   WatchStateDto,
@@ -258,6 +259,137 @@ async function seriesSlugsFor(
     .innerJoin(series, eq(series.id, seriesMember.seriesId))
     .where(inArray(seriesMember.workId, workIds));
   return new Map(rows.map((r) => [r.workId, r.slug]));
+}
+
+/* ──────────────────────── library, grouped ──────────────────────── */
+
+/**
+ * One status for a whole franchise, from the states of its entries.
+ *
+ * Ordered by what the user would say out loud. "I'm watching Attack on Titan"
+ * is true the moment any season is in progress, regardless of the other five.
+ */
+function deriveSeriesStatus(states: UserWorkRow[]): WatchStateDto {
+  if (!states.length) return 'planned';
+  if (states.some((s) => s.status === 'watching' || s.rewatching)) return 'watching';
+  if (states.some((s) => s.status === 'on_hold')) return 'on_hold';
+  if (states.every((s) => s.status === 'completed')) return 'completed';
+  if (states.every((s) => s.status === 'dropped')) return 'dropped';
+  return 'planned';
+}
+
+/**
+ * The library, one row per series.
+ *
+ * Note it reports `totalEntries` from the full spine, not from what the user
+ * owns — "Season 5 of 6" is only meaningful if the 6 counts seasons that
+ * exist, including the ones they have not added.
+ */
+export async function listLibrarySeries(
+  actor: Actor,
+): Promise<LibrarySeriesEntry[]> {
+  const db = unscoped();
+
+  const owned = await asUser(actor.userId, async (tx) =>
+    tx
+      .select({ uw: userWork, w: work })
+      .from(userWork)
+      .innerJoin(work, eq(work.id, userWork.workId))
+      .where(and(eq(userWork.userId, actor.userId), isNull(userWork.deletedAt))),
+  );
+  if (!owned.length) return [];
+
+  // Which series each owned work belongs to.
+  const membership = await db
+    .select({ workId: seriesMember.workId, seriesId: seriesMember.seriesId })
+    .from(seriesMember)
+    .where(inArray(seriesMember.workId, owned.map((o) => o.w.id)));
+  const seriesIds = [...new Set(membership.map((m) => m.seriesId))];
+  if (!seriesIds.length) return [];
+
+  const [seriesRows, allMembers] = await Promise.all([
+    db.select().from(series).where(inArray(series.id, seriesIds)),
+    db
+      .select({ m: seriesMember, w: work })
+      .from(seriesMember)
+      .innerJoin(work, eq(work.id, seriesMember.workId))
+      .where(inArray(seriesMember.seriesId, seriesIds)),
+  ]);
+
+  const ownedByWork = new Map(owned.map((o) => [o.w.id, o]));
+  const out: LibrarySeriesEntry[] = [];
+
+  for (const s of seriesRows) {
+    const members = allMembers.filter((m) => m.m.seriesId === s.id);
+    const spine = members
+      .filter((m) => m.m.spineOrd !== null)
+      .sort((a, b) => (a.m.spineOrd ?? 0) - (b.m.spineOrd ?? 0));
+
+    const mine = members
+      .map((m) => ownedByWork.get(m.w.id))
+      .filter((x): x is (typeof owned)[number] => Boolean(x));
+    if (!mine.length) continue;
+
+    const states = mine.map((m) => m.uw);
+
+    // Where they are: the first spine entry they own that is not finished,
+    // falling back to the most recently touched entry off the spine.
+    const inProgress = spine
+      .map((m) => ownedByWork.get(m.w.id))
+      .find((o) => o && !(o.uw.status === 'completed' && !o.uw.rewatching));
+    const fallback = [...mine].sort(
+      (a, b) => (b.uw.lastWatchedAt?.getTime() ?? 0) - (a.uw.lastWatchedAt?.getTime() ?? 0),
+    )[0];
+    const cursor = inProgress ?? (states.every((x) => x.status === 'completed') ? null : fallback);
+
+    // The representative poster is the FIRST entry on the spine — the one
+    // people picture when they hear the name, not whichever season happened
+    // to be added first.
+    const root = spine[0]?.w ?? mine[0].w;
+
+    const hasUnwatchedNext = spine.some(
+      (m) =>
+        !ownedByWork.has(m.w.id) &&
+        (m.w.releaseStatus === 'finished' || m.w.releaseStatus === 'airing'),
+    );
+
+    out.push({
+      seriesId: s.id,
+      slug: s.slug,
+      title: s.title,
+      coverUrl: root.coverUrl,
+      accentHex: root.accentHex,
+      totalEntries: spine.length || mine.length,
+      ownedEntries: mine.length,
+      completedEntries: states.filter((x) => x.status === 'completed').length,
+      status: deriveSeriesStatus(states),
+      favorite: states.some((x) => x.favorite),
+      rating: states.find((x) => x.rating !== null)?.rating ?? null,
+      current: cursor
+        ? {
+            workId: cursor.w.id,
+            title: cursor.w.titleEnglish ?? cursor.w.titleRomaji,
+            ord: members.find((m) => m.w.id === cursor.w.id)?.m.spineOrd ?? null,
+            progress: cursor.uw.progress,
+            total: cursor.w.episodeCount,
+          }
+        : null,
+      hasUnwatchedNext,
+      lastWatchedAt:
+        states
+          .map((x) => x.lastWatchedAt)
+          .filter((d): d is Date => Boolean(d))
+          .sort((a, b) => b.getTime() - a.getTime())[0]
+          ?.toISOString() ?? null,
+    });
+  }
+
+  // Most recently touched first; never-watched titles fall to the end.
+  return out.sort(
+    (a, b) =>
+      (b.lastWatchedAt ? Date.parse(b.lastWatchedAt) : 0) -
+      (a.lastWatchedAt ? Date.parse(a.lastWatchedAt) : 0),
+  );
 }
 
 /* ──────────────────────────────── series ──────────────────────────────── */
