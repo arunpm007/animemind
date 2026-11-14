@@ -10,6 +10,7 @@ import {
   seriesMember,
   work,
   workEvent,
+  workExternalId,
   workRelation,
 } from '../db/schema';
 import { ChainProvider } from '../providers/chain';
@@ -18,7 +19,7 @@ import { KitsuProvider } from '../providers/kitsu';
 import { MalProvider } from '../providers/mal';
 import type { AnimeProvider, RawWork } from '../providers/types';
 import type { CacheAdapter } from '../providers/http';
-import { reconcileIdentity, resolveWorkId } from './identity';
+import { reconcileIdentity, resolveWorkId, siteForProvider } from './identity';
 
 /**
  * Ingestion: provider -> normalised rows -> derived series.
@@ -179,21 +180,28 @@ export async function upsertWork(
   providerId: 'jikan' | 'mal' | 'kitsu' = 'kitsu',
 ): Promise<UpsertResult> {
   const db = unscoped();
-  const next = rowFrom(w, providerId);
+  // Whoever actually produced the record owns the id space it is filed under.
+  // `providerId` is only the provider we ASKED, and with a chain that is the
+  // primary's name regardless of which member answered.
+  const source = w.sourceProvider ?? providerId;
+  const next = rowFrom(w, source);
 
   // Resolve through identity, not just (provider, providerId). After a merge
   // the surviving row carries the other provider's id, and a plain lookup
   // would miss it and insert a duplicate — undoing the merge on the next
   // search.
-  const existingId = await resolveWorkId(providerId, w.providerId);
+  const existingId = await resolveWorkId(source, w.providerId);
   const existing = existingId
     ? await db.query.work.findFirst({ where: eq(work.id, existingId) })
     : undefined;
 
   if (!existing) {
     const [row] = await db.insert(work).values(next).returning({ id: work.id });
+    await claimOwnId(row.id, source, w.providerId);
     return { id: row.id, changed: true, events: [] };
   }
+
+  await claimOwnId(existing.id, source, w.providerId);
 
   const events: UpsertResult['events'] = [];
   if (existing.contentHash !== next.contentHash) {
@@ -507,13 +515,60 @@ export async function ensureWork(
   provider: AnimeProvider = defaultProvider(),
 ): Promise<string> {
   const existingId = await resolveWorkId(provider.id, providerWorkId);
-  if (existingId) return existingId;
+  if (existingId) {
+    // Returning here used to end the story, and that is why no work in the
+    // catalog had ever claimed an id. Search warms the catalog first, so by
+    // the time anyone adds a title the row always exists — this branch was
+    // taken every single time, and the registration below never ran at all.
+    // Cross-provider identity was dead code, and the duplicates it exists to
+    // prevent accumulated unchallenged.
+    if (await identityChecked(existingId)) return existingId;
+    return registerIdentity(existingId, providerWorkId, provider);
+  }
 
   const raw = await provider.getWork(providerWorkId);
   const { id } = await upsertWork(raw, provider.id);
   // May return a DIFFERENT id: this title can already exist under another
   // provider, in which case the two rows are merged and the older one wins.
   return registerIdentity(id, providerWorkId, provider);
+}
+
+/**
+ * Has this work ever asked its provider who it is elsewhere?
+ *
+ * Deliberately NOT "does it hold an external id". Every work claims its own id
+ * at ingest, so that test is true for everything and would skip the lookup
+ * forever — the same shape of mistake as the early return it guards.
+ */
+async function identityChecked(workId: string): Promise<boolean> {
+  const row = await unscoped().query.work.findFirst({
+    columns: { identityCheckedAt: true },
+    where: eq(work.id, workId),
+  });
+  return Boolean(row?.identityCheckedAt);
+}
+
+/**
+ * Record the one id we know for free: the row's own.
+ *
+ * No network call, and it is what makes the expensive lookup pay off. A
+ * mapping fetched for one row can only meet another row if that other row has
+ * already said who it is — so claiming this costs nothing and turns a single
+ * `getExternalIds` call on either side into a merge.
+ *
+ * Correct provenance is a precondition. Filing a MyAnimeList id under Kitsu's
+ * name would be a false claim on a live id, and the next genuine Kitsu row
+ * with that number would be merged into an unrelated anime.
+ */
+async function claimOwnId(
+  workId: string,
+  provider: 'jikan' | 'mal' | 'kitsu',
+  providerWorkId: string,
+): Promise<void> {
+  await unscoped()
+    .insert(workExternalId)
+    .values({ site: siteForProvider(provider), externalId: providerWorkId, workId })
+    .onConflictDoNothing();
 }
 
 /**
@@ -528,6 +583,7 @@ export async function registerIdentity(
   providerWorkId: string,
   provider: AnimeProvider = defaultProvider(),
 ): Promise<string> {
+  const db = unscoped();
   try {
     const ids = provider.getExternalIds
       ? await provider.getExternalIds(providerWorkId)
@@ -538,10 +594,26 @@ export async function registerIdentity(
     if (provider.id === 'jikan' || provider.id === 'mal') {
       ids.push({ site: 'myanimelist', externalId: providerWorkId });
     }
-    if (!ids.length) return workId;
 
-    return await reconcileIdentity(workId, ids);
+    // Stamped even when the provider knows of no other site: the question was
+    // asked and answered, and re-asking on every add would spend a request a
+    // time to be told the same nothing.
+    const survivor = ids.length ? await reconcileIdentity(workId, ids) : workId;
+    await db
+      .update(work)
+      .set({ identityCheckedAt: new Date() })
+      .where(eq(work.id, survivor));
+
+    // A different id back means two rows were folded into one, which changes
+    // the shape of the series they belong to. Without this the spine keeps the
+    // membership it was built with and renders its positions with the merged
+    // entry's number missing — 1, 2, 3, 4, 6, 8 — which looks like the app has
+    // lost two seasons rather than stopped double-counting them.
+    if (survivor !== workId) await recomputeSeries(survivor);
+    return survivor;
   } catch (err) {
+    // Left unstamped on purpose. A provider that was merely unreachable
+    // should be asked again, not written off as having no identity.
     console.warn(`identity registration failed for ${workId}:`, err);
     return workId;
   }

@@ -109,6 +109,16 @@ export const work = pgTable(
     syncFailures: smallint('sync_failures').notNull().default(0),
     /** True once the relation neighbourhood has been walked. */
     relationsHydrated: boolean('relations_hydrated').notNull().default(false),
+    /**
+     * When this work last asked its provider who it is at the OTHER sites.
+     *
+     * Distinct from simply holding a row in work_external_id, because every
+     * work claims its own id for free at ingest — so "has an id" says nothing
+     * about whether the cross-provider lookup, the one that actually finds
+     * duplicates, has ever run. Conflating the two is what let registration
+     * silently skip itself.
+     */
+    identityCheckedAt: timestamp('identity_checked_at', { withTimezone: true }),
     episodesHydrated: boolean('episodes_hydrated').notNull().default(false),
 
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

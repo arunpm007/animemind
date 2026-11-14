@@ -9,6 +9,23 @@ import type { ReleaseStatus, RelationKind, WorkKind } from '../domain/types';
 
 export interface RawWork {
   providerId: string;
+  /**
+   * Which provider actually produced this record, and therefore which id
+   * space `providerId` belongs to.
+   *
+   * Set by ChainProvider, which presents itself under its PRIMARY provider's
+   * id while any member of the chain may have answered. Storing a row under
+   * the primary's name when a fallback produced it files a MyAnimeList id in
+   * Kitsu's id space — two numbering schemes of small integers, so the id
+   * stays plausible and silently points at a different anime. Later lookups
+   * then create a second row for the show (the duplicate), and cross-provider
+   * identity reads the wrong mappings and can merge two unrelated titles,
+   * which costs a user their watch history.
+   *
+   * Absent from a provider that is not chained; the caller falls back to the
+   * provider it asked.
+   */
+  sourceProvider?: 'jikan' | 'mal' | 'kitsu';
   kind: WorkKind;
   titleRomaji: string;
   titleEnglish: string | null;

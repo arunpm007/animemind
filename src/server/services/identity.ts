@@ -3,7 +3,6 @@ import { unscoped } from '../db/client';
 import {
   episode,
   seriesMember,
-  userWork,
   work,
   workExternalId,
   workRelation,
@@ -105,57 +104,16 @@ export async function mergeWorks(keeperId: string, loserId: string): Promise<str
   const db = unscoped();
 
   await db.transaction(async (tx) => {
-    // ── user_work: combine where a user holds both ──
-    const dupes = await tx.execute<{
-      user_id: string;
-      keep_progress: number;
-      lose_progress: number;
-    }>(sql`
-      SELECT k.user_id,
-             k.progress AS keep_progress,
-             l.progress AS lose_progress
-        FROM user_work k
-        JOIN user_work l ON l.user_id = k.user_id AND l.work_id = ${loserId}
-       WHERE k.work_id = ${keeperId}
-    `);
-
-    for (const d of dupes) {
-      // Never regress: take the further of the two, and prefer the stronger
-      // status (completed beats watching beats planned).
-      await tx.execute(sql`
-        UPDATE user_work k
-           SET progress = GREATEST(k.progress, l.progress),
-               status = CASE
-                 WHEN 'completed' IN (k.status::text, l.status::text) THEN 'completed'::watch_state
-                 WHEN 'watching'  IN (k.status::text, l.status::text) THEN 'watching'::watch_state
-                 ELSE k.status
-               END,
-               rewatch_count = GREATEST(k.rewatch_count, l.rewatch_count),
-               favorite = k.favorite OR l.favorite,
-               rating = COALESCE(k.rating, l.rating),
-               notes = COALESCE(k.notes, l.notes),
-               last_watched_at = GREATEST(k.last_watched_at, l.last_watched_at)
-          FROM user_work l
-         WHERE k.user_id = ${d.user_id} AND k.work_id = ${keeperId}
-           AND l.user_id = ${d.user_id} AND l.work_id = ${loserId}
-      `);
-      await tx
-        .delete(userWork)
-        .where(and(eq(userWork.userId, d.user_id), eq(userWork.workId, loserId)));
-    }
-
-    // Whatever is left has no counterpart — just repoint it.
-    await tx.update(userWork).set({ workId: keeperId }).where(eq(userWork.workId, loserId));
-
-    // ── watch sessions: pass numbers could collide, so offset rather than drop ──
-    await tx.execute(sql`
-      UPDATE watch_session l
-         SET work_id = ${keeperId},
-             pass_no = l.pass_no + COALESCE(
-               (SELECT max(pass_no) FROM watch_session k
-                 WHERE k.user_id = l.user_id AND k.work_id = ${keeperId}), 0)
-       WHERE l.work_id = ${loserId}
-    `);
+    // ── user-owned rows ──
+    //
+    // Delegated to a SECURITY DEFINER function because `user_work` and
+    // `watch_session` are under FORCE row-level security and this code runs
+    // with no user pinned, so it can see NOTHING in either table. Doing the
+    // moves from here updated zero rows and then deleted the losing work,
+    // whose ON DELETE CASCADE is enforced by the system and ignores RLS — so
+    // the watch history went with it. See drizzle/_post/0005_merge_user_work.sql
+    // for why the privilege is confined to that one function.
+    await tx.execute(sql`SELECT merge_user_work(${keeperId}::uuid, ${loserId}::uuid)`);
 
     // ── catalog ──
     //
@@ -276,21 +234,53 @@ export async function resolveWorkId(
   return claim?.workId ?? null;
 }
 
-/** Deduplicate the conflicting rows that existed before identity was tracked. */
+/**
+ * Find rows that are the same anime under two providers.
+ *
+ * Repairs duplicates that identity registration missed — rows written before
+ * it existed, and rows the relation crawl discovered without claiming ids for.
+ *
+ * The net is narrow on purpose: a missed duplicate is untidy, a wrong merge
+ * rewrites someone's watch history. So a pair must agree on medium AND episode
+ * count AND a title, and come from different providers.
+ *
+ * Titles are compared with punctuation and spacing stripped, because that is
+ * the ONLY thing separating the real duplicates. MyAnimeList writes "Shingeki
+ * no Kyojin: The Final Season" and Kitsu writes "Shingeki no Kyojin The Final
+ * Season" — one colon, which an exact comparison treats as two different
+ * shows, so the season was listed twice on its own series page and counted
+ * twice in every franchise total.
+ *
+ * Either title may carry the match, since providers disagree about which
+ * romanisation is canonical, but a title only matches its OWN field: comparing
+ * one row's romaji against another's English is how a show gets merged with
+ * its own spin-off.
+ */
 export async function findDuplicatePairs(): Promise<
   Array<{ keeper: string; loser: string; title: string }>
 > {
   const db = unscoped();
-  // Only exact title matches across different providers — a deliberately
-  // narrow net, because a false merge costs someone their watch history.
+  // Normalise to letters and digits only, so punctuation, spacing and case
+  // cannot hide a duplicate. The empty-string guard matters: two rows with no
+  // English title both normalise to '' and would otherwise match each other.
+  const norm = (col: string) =>
+    sql.raw(`lower(regexp_replace(coalesce(${col}, ''), '[^[:alnum:]]', '', 'g'))`);
+
   const rows = await db.execute<{ keeper: string; loser: string; title: string }>(sql`
-    SELECT a.id AS keeper, b.id AS loser, a.title_romaji AS title
+    SELECT a.id AS keeper, b.id AS loser,
+           coalesce(a.title_english, a.title_romaji) AS title
       FROM work a
       JOIN work b
-        ON lower(a.title_romaji) = lower(b.title_romaji)
-       AND a.provider <> b.provider
+        ON a.provider <> b.provider
+       -- Oldest wins: it is the row already in libraries and already pointed
+       -- at by series membership.
        AND a.created_at < b.created_at
-       AND COALESCE(a.episode_count, -1) = COALESCE(b.episode_count, -1)
+       AND a.kind = b.kind
+       AND coalesce(a.episode_count, -1) = coalesce(b.episode_count, -1)
+       AND (
+            (${norm('a.title_romaji')} <> '' AND ${norm('a.title_romaji')} = ${norm('b.title_romaji')})
+         OR (${norm('a.title_english')} <> '' AND ${norm('a.title_english')} = ${norm('b.title_english')})
+       )
   `);
   return rows;
 }

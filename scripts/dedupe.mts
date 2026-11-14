@@ -1,8 +1,8 @@
 /**
  * Merge catalog rows that are the same anime under different providers.
  *
- * Repairs the duplicates that existed before cross-provider identity was
- * tracked. New rows reconcile on ingest and will not need this.
+ * Repairs duplicates that identity registration never caught. New rows claim
+ * their own id at ingest and reconcile on add, so this is for the backlog.
  *
  *   pnpm dedupe:works          # dry run — prints what it WOULD merge
  *   pnpm dedupe:works --apply  # actually merge
@@ -11,14 +11,15 @@
  * would shadow a script called plain `dedupe`.
  *
  * Dry run by default because a merge rewrites watch history. The matcher is
- * deliberately narrow (same title, same episode count, different providers):
- * a missed duplicate is a tidiness problem, a wrong merge costs someone their
- * progress.
+ * deliberately narrow — different providers, same medium, same episode count,
+ * and a title that matches once punctuation and case are stripped: a missed
+ * duplicate is a tidiness problem, a wrong merge costs someone their progress.
  */
 import { eq } from 'drizzle-orm';
 import { unscoped } from '../src/server/db/client';
 import { work } from '../src/server/db/schema';
 import { findDuplicatePairs, mergeWorks } from '../src/server/services/identity';
+import { recomputeSeries } from '../src/server/services/ingest';
 
 async function main() {
   const apply = process.argv.includes('--apply');
@@ -49,6 +50,10 @@ async function main() {
 
     if (apply) {
       await mergeWorks(keeper.id, loser.id);
+      // The series was built around two rows that are now one. Left alone it
+      // keeps the old membership, so the spine shows gaps where the merged
+      // entries used to be and every franchise total stays double-counted.
+      await recomputeSeries(keeper.id);
       merged += 1;
     }
   }

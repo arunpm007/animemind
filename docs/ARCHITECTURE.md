@@ -109,6 +109,22 @@ unscoped()           // shared catalog, and sign-in only.
 before any identity exists. That lookup is confined to `src/server/auth/` — one
 file to audit.
 
+### The one operation that has to cross users
+
+Merging two catalog rows has to move `user_work` and `watch_session` off the
+losing row. Running as the app role, that code sees **nothing** in either table
+— and `ON DELETE CASCADE` is a referential action, performed by the system,
+which ignores RLS. So the merge moved zero rows, reported success, deleted the
+losing work, and the cascade took the watch history with it. Silent, total, and
+done by the one tool whose comments promise it will never cost anyone an
+episode.
+
+The privilege is confined rather than granted: `merge_user_work(keeper, loser)`
+in `drizzle/_post/0005_merge_user_work.sql` is `SECURITY DEFINER`, has a pinned
+`search_path`, takes two work ids, runs no dynamic SQL, and is executable only
+by the app role. Granting `BYPASSRLS` to the app role instead would have
+removed the guarantee from every query in the app to fix one function.
+
 ---
 
 ## 3. Sync: progress must never go backwards
@@ -167,6 +183,38 @@ AniList would have been the obvious technical pick — better structured than
 all of them — but its terms prohibit use "within competing, non-complementary
 services… including anime and manga list or tracker services", which describes
 this product precisely.
+
+### One anime, two numbers
+
+Every provider numbers the same show differently: Attack on Titan is
+MyAnimeList 16498 and Kitsu 7442. A catalog keyed on `(provider, provider_id)`
+alone therefore holds two rows for one anime, lays both on the series spine,
+and counts both in every franchise total — so a season already finished shows
+up as unwatched and "4 ready to watch" means four seasons the user has seen.
+
+Kitsu publishes mappings to the other sites, which gives a reliable key. Rows
+are **merged**, not cross-linked: a link means every query downstream has to
+resolve it, and the one that forgets reintroduces the bug.
+
+Three things have to hold, and for a long time none of them did:
+
+1. **Every row claims its own id at ingest**, free, from `provider` and
+   `provider_id`. A mapping fetched for one row can only meet another row if
+   that other row has already said who it is — with nothing claimed, the whole
+   mechanism is inert.
+2. **Provenance must be accurate.** `ChainProvider` presents itself under its
+   primary's id while any member may have answered, so a record is stamped with
+   `sourceProvider`. Filing a MyAnimeList id under Kitsu's name is not a
+   cosmetic error: both are small integers, the row stays plausible, and the
+   next genuine row with that number gets merged into an unrelated anime.
+3. **The lookup must actually run.** Tracked by `work.identity_checked_at`, not
+   by whether the row holds an external id — every row holds one of those now,
+   so that test would always pass and the lookup would never happen.
+
+`pnpm dedupe:works` repairs the backlog (dry run by default). The matcher
+requires different providers, same medium, same episode count, and a title that
+matches once punctuation and case are stripped — the real duplicates differed
+by a single colon.
 
 Everything below applies regardless of which provider leads.
 
@@ -281,3 +329,11 @@ already in an app store.
 - **Accent colour** is populated by the seed only; nothing samples cover art
   yet, so most pages fall back to a neutral key light.
 - **Notifications** are recorded in `user_notification` but never delivered.
+- **The chain falls back across id spaces.** `getWork`, `getRelations` and
+  `getEpisodes` take an id that belongs to one provider's numbering, but on a
+  `ProviderUnavailableError` the chain retries the same id against the next
+  provider, whose numbering is unrelated. A "not found" correctly stops the
+  chain; an outage does not, so the fallback can answer confidently about a
+  different anime. Provenance stamping keeps the result from corrupting the
+  original row, but the lookup itself still needs id translation.
+- **`pnpm spine`** points at `scripts/spine-report.ts`, which does not exist.

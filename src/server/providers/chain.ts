@@ -37,11 +37,11 @@ export class ChainProvider implements AnimeProvider {
   private async attempt<T>(
     op: string,
     fn: (p: AnimeProvider) => Promise<T>,
-  ): Promise<T> {
+  ): Promise<{ answered: AnimeProvider; value: T }> {
     let last: unknown;
     for (const p of this.providers) {
       try {
-        return await fn(p);
+        return { answered: p, value: await fn(p) };
       } catch (err) {
         // A definitive "no such work" is the answer, not a failure to answer.
         if (err instanceof ProviderNotFoundError) throw err;
@@ -55,20 +55,50 @@ export class ChainProvider implements AnimeProvider {
     );
   }
 
-  search(query: string, limit: number): Promise<RawWork[]> {
-    return this.attempt('search', (p) => p.search(query, limit));
+  /**
+   * Stamp the provider that actually answered onto every record.
+   *
+   * The chain presents itself under the PRIMARY provider's id, so a caller
+   * that writes `provider: chain.id` files whatever came back under the
+   * primary's name. When a fallback answered, that puts a MyAnimeList id in
+   * Kitsu's id space — both are small integers, so nothing looks wrong — and
+   * the row then refers to a different anime than its id claims. The next
+   * lookup under the true id creates a second row for the same show, and
+   * cross-provider identity fetches mappings for the wrong title.
+   */
+  private stamp(w: RawWork, answered: AnimeProvider): RawWork {
+    return { ...w, sourceProvider: w.sourceProvider ?? answered.id };
   }
 
-  getWork(providerId: string): Promise<RawWork> {
-    return this.attempt('getWork', (p) => p.getWork(providerId));
+  async search(query: string, limit: number): Promise<RawWork[]> {
+    const { answered, value } = await this.attempt('search', (p) =>
+      p.search(query, limit),
+    );
+    return value.map((w) => this.stamp(w, answered));
   }
 
-  getRelations(providerId: string): Promise<RawRelation[]> {
-    return this.attempt('getRelations', (p) => p.getRelations(providerId));
+  async getWork(providerId: string): Promise<RawWork> {
+    const { answered, value } = await this.attempt('getWork', (p) =>
+      p.getWork(providerId),
+    );
+    return this.stamp(value, answered);
   }
 
-  getEpisodes(providerId: string): Promise<RawEpisode[]> {
-    return this.attempt('getEpisodes', (p) => p.getEpisodes(providerId));
+  async getRelations(providerId: string): Promise<RawRelation[]> {
+    const { answered, value } = await this.attempt('getRelations', (p) =>
+      p.getRelations(providerId),
+    );
+    // A relation can inline a complete record, which is upserted directly and
+    // so needs the same provenance as anything else.
+    return value.map((r) =>
+      r.hint?.work
+        ? { ...r, hint: { ...r.hint, work: this.stamp(r.hint.work, answered) } }
+        : r,
+    );
+  }
+
+  async getEpisodes(providerId: string): Promise<RawEpisode[]> {
+    return (await this.attempt('getEpisodes', (p) => p.getEpisodes(providerId))).value;
   }
 
   async getExternalIds(
