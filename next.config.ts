@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { IMAGE_HOSTS } from './src/lib/image-hosts';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -46,14 +47,8 @@ const nextConfig: NextConfig = {
     // Cover art is served from MyAnimeList's CDN. Narrow remote patterns
     // rather than a wildcard: this list is an allowlist of who may be
     // proxied through our own image optimiser.
-    remotePatterns: [
-      // Kitsu — the primary provider.
-      { protocol: 'https', hostname: 'media.kitsu.app' },
-      { protocol: 'https', hostname: 'media.kitsu.io' },
-      // MyAnimeList, via Jikan or the official API.
-      { protocol: 'https', hostname: 'cdn.myanimelist.net' },
-      { protocol: 'https', hostname: 'api-cdn.myanimelist.net' },
-    ],
+    // The list lives in src/lib/image-hosts.ts so PosterImage can check it too.
+    remotePatterns: IMAGE_HOSTS.map((hostname) => ({ protocol: 'https' as const, hostname })),
     formats: ['image/avif', 'image/webp'],
   },
   // argon2 is a native addon and must not be bundled into the server chunks.
