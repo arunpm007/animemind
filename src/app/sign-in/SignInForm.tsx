@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -9,11 +10,13 @@ import { CinemaBackdrop } from '@/components/motion/CinemaBackdrop';
 export default function SignInForm({
   signupsOpen,
   demoEnabled,
+  initialMode = 'login',
 }: {
   signupsOpen: boolean;
   demoEnabled: boolean;
+  initialMode?: 'login' | 'register';
 }) {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [demoBusy, setDemoBusy] = useState(false);
   // AnimeMind has no password reset: a new account must acknowledge that.
   const [understood, setUnderstood] = useState(false);
@@ -88,7 +91,9 @@ export default function SignInForm({
                 AnimeMind
               </span>
             </div>
-            <h1 className="t-title mb-2">Never forget what you watched.</h1>
+            <h1 className="t-title mb-2">
+              {mode === 'register' ? 'Create your account' : 'Welcome back'}
+            </h1>
             <p className="text-sm text-[var(--color-dim)]">
               Tell it once. It remembers the seasons, the films, and whether the next
               one is out.
@@ -233,6 +238,15 @@ export default function SignInForm({
               </p>
             </div>
           ) : null}
+
+          <p className="rise mt-8 text-center">
+            <Link
+              href="/welcome"
+              className="text-xs text-[var(--color-mute)] transition-colors hover:text-[var(--color-dim)]"
+            >
+              ← What is AnimeMind?
+            </Link>
+          </p>
         </div>
       </main>
     </>

@@ -115,6 +115,24 @@ describe('sign-out', () => {
 });
 
 describe('session bounce', () => {
+  it('sends a first-time visitor (no session cookie) to the welcome page', async () => {
+    const res = await sessionRoute(
+      new Request(`${ORIGIN}/api/v1/auth/session?next=%2F`, { headers: { 'x-real-ip': '10.7.0.3' } }),
+      undefined as never,
+    );
+    expect(res.headers.get('location')).toBe(`${ORIGIN}/welcome`);
+  });
+
+  it('sends a returning visitor with a dead session to sign-in, not the welcome page', async () => {
+    const res = await sessionRoute(
+      new Request(`${ORIGIN}/api/v1/auth/session?next=%2F`, {
+        headers: { cookie: 'am_refresh=not-a-real-token', 'x-real-ip': '10.7.0.4' },
+      }),
+      undefined as never,
+    );
+    expect(res.headers.get('location')).toBe(`${ORIGIN}/sign-in`);
+  });
+
   it('never redirects off-site, even with the backslash trick', async () => {
     const token = await newSession();
     const res = await sessionRoute(
