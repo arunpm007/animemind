@@ -168,6 +168,13 @@ Before the first production migration, set `APP_DB_PASSWORD` (24+ characters).
 because the bootstrap gives `animemind_app` a public default password, and it
 also refuses if that role could bypass row-level security.
 
+### No password recovery (by design)
+
+AnimeMind is a personal project and sends no email, so there is **no password
+reset**. A forgotten password means the account and its library cannot be
+recovered. The sign-up form says so and requires the user to confirm it; the
+sign-in and account pages repeat it. The public demo needs no password.
+
 ### Security settings
 
 | Variable | Default | What it does |

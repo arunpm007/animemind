@@ -15,6 +15,8 @@ export default function SignInForm({
 }) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [demoBusy, setDemoBusy] = useState(false);
+  // AnimeMind has no password reset: a new account must acknowledge that.
+  const [understood, setUnderstood] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -25,6 +27,10 @@ export default function SignInForm({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (mode === 'register' && !understood) {
+      setError('Please confirm you understand a lost password cannot be recovered.');
+      return;
+    }
     setBusy(true);
     setError(null);
     setFieldErrors({});
@@ -149,6 +155,26 @@ export default function SignInForm({
               ) : null}
             </div>
 
+            {mode === 'register' ? (
+              <div className="rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-3.5 py-3">
+                <p className="text-xs font-medium">No password recovery</p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--color-dim)]">
+                  AnimeMind is a personal project with no password reset and no email.
+                  If you forget your password, your account and library can&apos;t be
+                  recovered. Save it in a password manager.
+                </p>
+                <label className="mt-2.5 flex cursor-pointer items-start gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={understood}
+                    onChange={(e) => setUnderstood(e.target.checked)}
+                    className="mt-0.5 size-3.5 shrink-0 accent-[var(--color-accent)]"
+                  />
+                  <span>I understand a lost password means a lost account.</span>
+                </label>
+              </div>
+            ) : null}
+
             {error ? (
               <p
                 role="alert"
@@ -160,17 +186,24 @@ export default function SignInForm({
 
             <button
               type="submit"
-              disabled={busy}
+              disabled={busy || (mode === 'register' && !understood)}
               className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white transition-transform duration-[160ms] ease-[var(--ease-state)] active:scale-[0.98] disabled:opacity-60"
             >
               {busy ? <Loader2 className="size-4 animate-spin" /> : null}
               {mode === 'login' ? 'Sign in' : 'Create account'}
             </button>
 
+            {mode === 'login' ? (
+              <p className="text-center text-[11px] leading-relaxed text-[var(--color-mute)]">
+                Forgot your password? There&apos;s no reset — accounts can&apos;t be recovered.
+              </p>
+            ) : null}
+
             {signupsOpen ? (
               <button
                 type="button"
                 onClick={() => {
+                  setUnderstood(false);
                   setMode(mode === 'login' ? 'register' : 'login');
                   setError(null);
                   setFieldErrors({});
