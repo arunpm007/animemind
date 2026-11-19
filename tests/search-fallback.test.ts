@@ -114,3 +114,23 @@ describe('search with the provider unavailable', () => {
     await expect(search(null, 'anything', 5)).rejects.toThrow(TypeError);
   });
 });
+
+describe('signed-out (local-only) search', () => {
+  it('answers from the local catalog without ever calling the provider', async () => {
+    const providerSearch = vi.fn(async () => []);
+    vi.spyOn(ingest, 'defaultProvider').mockReturnValue({
+      id: 'jikan',
+      capabilities: { inlinesRelationMetadata: false, maxRequestsPerMinute: 50 },
+      search: providerSearch,
+      getWork: async () => {
+        throw new Error('must not be called');
+      },
+      getRelations: async () => [],
+      getEpisodes: async () => [],
+    });
+    const { results, degraded } = await search(null, `Bebop ${TAG}`, 10, { useProvider: false });
+    expect(providerSearch).not.toHaveBeenCalled();
+    expect(degraded).toBe(false);
+    expect(results.map((r) => r.title)).toEqual([`Cowboy Bebop ${TAG}`]);
+  });
+});

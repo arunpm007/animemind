@@ -1,9 +1,18 @@
 import { hash, verify } from '@node-rs/argon2';
 import { and, eq, isNull, lt, ne, or } from 'drizzle-orm';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import type { AuthResult, ClientKind, SessionUser } from '@/contracts';
-import { unscoped } from '../db/client';
-import { account, authSession } from '../db/schema';
+import { asUser, unscoped } from '../db/client';
+import {
+  account,
+  appliedOp,
+  authSession,
+  userNotification,
+  userWork,
+  watchSession,
+} from '../db/schema';
+import { seedSampleLibrary } from '../demo/sample-library';
+import { demoEmail } from './config';
 import {
   ACCESS_TTL_SECONDS,
   REFRESH_TTL_SECONDS,
@@ -14,7 +23,13 @@ import {
 
 export class AuthError extends Error {
   constructor(
-    public readonly code: 'invalid_credentials' | 'email_taken' | 'invalid_refresh',
+    public readonly code:
+      | 'invalid_credentials'
+      | 'email_taken'
+      | 'invalid_refresh'
+      | 'signups_closed'
+      | 'demo_unavailable'
+      | 'demo_readonly',
     message: string,
   ) {
     super(message);
@@ -72,6 +87,75 @@ async function issue(
   };
 }
 
+/* ────────────────────────────── demo account ────────────────────────────── */
+
+/**
+ * The shared demo account, created on first use.
+ *
+ * Its password is 32 random bytes that are hashed and immediately forgotten,
+ * so nobody can sign in to it with a password — the only door is the demo
+ * button, which is rate limited. Its library is reset nightly (resetDemo).
+ */
+async function ensureDemoAccount(): Promise<typeof account.$inferSelect> {
+  const email = demoEmail();
+  if (!email) throw new AuthError('demo_unavailable', 'The demo is not available right now.');
+  const db = unscoped();
+  const existing = await db.query.account.findFirst({ where: eq(account.email, email) });
+  if (existing) return existing;
+
+  const passwordHash = await hash(randomBytes(32).toString('base64url'), ARGON);
+  const [row] = await db
+    .insert(account)
+    .values({ email, passwordHash, displayName: 'Demo' })
+    // Unique on lower(email); two first visitors at once must not both insert.
+    .onConflictDoNothing()
+    .returning();
+  const user = row ?? (await db.query.account.findFirst({ where: eq(account.email, email) }))!;
+  await seedSampleLibrary(user);
+  return user;
+}
+
+export function isDemoAccount(user: { email: string }): boolean {
+  const email = demoEmail();
+  return email !== null && user.email.toLowerCase() === email;
+}
+
+/** Sign in to the shared demo account (no password). */
+export async function loginDemo(client: ClientKind): Promise<AuthResult> {
+  const user = await ensureDemoAccount();
+  return issue(user, client, 'demo', randomUUID());
+}
+
+/**
+ * Nightly: wipe whatever visitors did to the demo library, re-seed it, and
+ * end every demo session so nobody keeps yesterday's state open forever.
+ */
+export async function resetDemo(): Promise<{ reset: boolean }> {
+  if (!demoEmail()) return { reset: false };
+  const user = await ensureDemoAccount();
+  await asUser(user.id, async (tx) => {
+    await tx.delete(watchSession).where(eq(watchSession.userId, user.id));
+    await tx.delete(appliedOp).where(eq(appliedOp.userId, user.id));
+    await tx.delete(userNotification).where(eq(userNotification.userId, user.id));
+    await tx.delete(userWork).where(eq(userWork.userId, user.id));
+  });
+  await seedSampleLibrary(user);
+  await unscoped()
+    .update(authSession)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(authSession.userId, user.id), isNull(authSession.revokedAt)));
+  return { reset: true };
+}
+
+async function refuseIfDemo(userId: string): Promise<void> {
+  const row = await unscoped().query.account.findFirst({ where: eq(account.id, userId) });
+  if (row && isDemoAccount(row)) {
+    throw new AuthError('demo_readonly', 'The demo account cannot change its password or name.');
+  }
+}
+
+/* ─────────────────────────────── accounts ─────────────────────────────── */
+
 export async function register(input: {
   email: string;
   password: string;
@@ -81,6 +165,9 @@ export async function register(input: {
 }): Promise<AuthResult> {
   const db = unscoped();
   const email = input.email.trim().toLowerCase();
+
+  // Never let anyone register the demo address and take the demo over.
+  if (email === demoEmail()) throw new AuthError('email_taken', 'That email is already registered.');
 
   const existing = await db.query.account.findFirst({
     where: eq(account.email, email),
@@ -194,6 +281,7 @@ export async function changePassword(input: {
   keepSessionToken?: string;
 }): Promise<void> {
   const db = unscoped();
+  await refuseIfDemo(input.userId);
 
   const row = await db.query.account.findFirst({
     where: eq(account.id, input.userId),
@@ -238,6 +326,7 @@ export async function updateProfile(input: {
   displayName: string | null;
 }): Promise<SessionUser> {
   const db = unscoped();
+  await refuseIfDemo(input.userId);
   const [row] = await db
     .update(account)
     .set({ displayName: input.displayName })
