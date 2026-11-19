@@ -45,4 +45,14 @@ export default async function setup() {
     stdio: 'inherit',
     env: { ...process.env, DATABASE_MIGRATION_URL: migrationUrl },
   });
+
+  // Rate-limit windows live in the database and outlast a test run. Without
+  // this, a few runs inside an hour fill the shared buckets (e.g. sign-ups from
+  // tests that send no client IP) and unrelated tests start failing with 429.
+  const db = postgres(migrationUrl, { max: 1, onnotice: () => {} });
+  try {
+    await db`TRUNCATE rate_limit`;
+  } finally {
+    await db.end();
+  }
 }

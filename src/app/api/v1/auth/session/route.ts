@@ -8,6 +8,7 @@ import {
   setAuthCookies,
 } from '@/server/http/api';
 import { RULES, clientIp, enforce } from '@/server/http/rate-limit';
+import { safeNext } from '@/server/http/safe-redirect';
 
 /**
  * Silent re-authentication for the web app.
@@ -23,12 +24,6 @@ import { RULES, clientIp, enforce } from '@/server/http/rate-limit';
  */
 export const dynamic = 'force-dynamic';
 
-/** Only same-site paths. An unvalidated `next` is an open redirect. */
-function safeNext(raw: string | null): string {
-  if (!raw) return '/';
-  if (!raw.startsWith('/') || raw.startsWith('//')) return '/';
-  return raw;
-}
 
 export const GET = route(async ({ req }) => {
   const url = new URL(req.url);
