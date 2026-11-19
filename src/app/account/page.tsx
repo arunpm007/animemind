@@ -39,7 +39,11 @@ export default async function AccountPage() {
           </section>
 
           <section className="pane rounded-xl p-5">
-            <h2 className="t-heading mb-4">Password</h2>
+            <h2 className="t-heading mb-1">Password</h2>
+            <p className="mb-4 text-[13px] text-[var(--color-dim)]">
+              There&apos;s no password reset. If you lose your password, this account
+              can&apos;t be recovered — keep it somewhere safe.
+            </p>
             <PasswordForm />
           </section>
 
