@@ -37,7 +37,7 @@ export default async function WaitingPage() {
                 {data.newlyAvailable.map((item) => (
                   <article key={item.work.id} className="pane flex items-center gap-4 rounded-xl p-3 pr-5">
                     <div className="w-[48px] shrink-0">
-                      <Poster work={item.work} />
+                      <Poster work={item.work} priority />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{item.work.title}</p>
@@ -70,7 +70,7 @@ export default async function WaitingPage() {
                 {data.waitingOn.map((item) => (
                   <article key={item.work.id} className="pane flex items-center gap-4 rounded-xl p-3 pr-5">
                     <div className="w-[48px] shrink-0">
-                      <Poster work={item.work} />
+                      <Poster work={item.work} priority />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{item.work.title}</p>

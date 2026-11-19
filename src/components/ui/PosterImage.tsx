@@ -59,7 +59,10 @@ export function PosterImage({
       alt=""
       fill
       sizes={sizes ?? '(max-width: 640px) 45vw, 200px'}
-      priority={priority}
+      // `priority` is deprecated in Next 16: above-the-fold posters load
+      // eagerly and first instead of waiting for the lazy-load observer.
+      loading={priority ? 'eager' : undefined}
+      fetchPriority={priority ? 'high' : undefined}
       onError={() => setBroken(true)}
       className="object-cover transition-[transform,filter] duration-[420ms] ease-[var(--ease-enter)] group-hover:brightness-110"
     />

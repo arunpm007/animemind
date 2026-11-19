@@ -47,7 +47,7 @@ export function BacklogRow({ row, kind }: { row: UpNextRow; kind: 'paused' | 're
   return (
     <article className="pane flex items-center gap-4 rounded-xl p-3 pr-4">
       <div className="w-[52px] shrink-0">
-        <Poster work={row.work} href={href} quiet />
+        <Poster work={row.work} href={href} quiet priority />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">

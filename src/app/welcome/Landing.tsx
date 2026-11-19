@@ -86,7 +86,8 @@ function PosterTile({
         alt=""
         fill
         sizes={sizes}
-        priority={priority}
+        loading={priority ? 'eager' : undefined}
+        fetchPriority={priority ? 'high' : undefined}
         className="object-cover"
         draggable={false}
       />
@@ -289,7 +290,7 @@ export default function Landing({
               ease: 'power2.out',
               scrollTrigger: { trigger: counter, start: 'top 85%' },
               onUpdate: () => {
-                counter.textContent = Math.round(state.n).toLocaleString();
+                counter.textContent = Math.round(state.n).toLocaleString('en-US');
               },
             });
           }
@@ -470,7 +471,7 @@ export default function Landing({
                         style={{ '--loop-dur': `${70 + i * 9}s` } as React.CSSProperties}
                       >
                         {[...col, ...col].map((p, k) => (
-                          <PosterTile key={k} poster={p} sizes="(min-width: 640px) 14vw, 25vw" priority={k < 3 && i < 4} />
+                          <PosterTile key={k} poster={p} sizes="(min-width: 640px) 14vw, 25vw" priority={k < 4} />
                         ))}
                       </div>
                     </div>
@@ -732,7 +733,7 @@ export default function Landing({
                 <p className="kanji-tag mb-2 justify-center">作品</p>
                 <p id="catalog" className="font-display pop-shadow text-[clamp(4rem,13vw,10rem)] leading-none">
                   <span data-count={catalogSize} className="flame-text tnum">
-                    {catalogSize.toLocaleString()}
+                    {catalogSize.toLocaleString('en-US')}
                   </span>
                   <span className="text-[var(--gold)]">+</span>
                 </p>

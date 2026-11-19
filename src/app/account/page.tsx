@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import { LogOut } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { DisplayNameForm, PasswordForm } from '@/components/AccountForms';
@@ -20,10 +20,19 @@ export default async function AccountPage() {
   const db = unscoped();
 
   const me = await db.query.account.findFirst({ where: eq(account.id, actor.userId) });
-  const sessions = await db
-    .select({ id: authSession.id })
+  // A "session" is a sign-in on one device: a refresh-token family. Every
+  // rotation adds a row, and signed-out or expired rows stay for replay
+  // detection, so counting rows overstated it badly. Count live families.
+  const [{ live }] = await db
+    .select({ live: sql<number>`count(distinct ${authSession.familyId})::int` })
     .from(authSession)
-    .where(eq(authSession.userId, actor.userId));
+    .where(
+      and(
+        eq(authSession.userId, actor.userId),
+        isNull(authSession.revokedAt),
+        gt(authSession.expiresAt, sql`now()`),
+      ),
+    );
 
   return (
     <AppShell>
@@ -55,9 +64,8 @@ export default async function AccountPage() {
           <section className="pane rounded-2xl p-5">
             <h2 className="t-heading mb-1">Sessions</h2>
             <p className="mb-4 text-[13px] text-[var(--color-dim)]">
-              {sessions.length} {sessions.length === 1 ? 'session' : 'sessions'} on
-              record. Signing out ends this one; changing your password ends all the
-              others.
+              Signed in on {live} {live === 1 ? 'device' : 'devices'}. Signing out ends
+              this one; changing your password ends all the others.
             </p>
             <form action="/api/v1/auth/logout" method="post">
               <button

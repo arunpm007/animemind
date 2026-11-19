@@ -28,6 +28,9 @@ export const RULES = {
   passwordPerUser: { name: 'password:user', limit: 5, windowSeconds: 15 * 60 },
   demoPerIp: { name: 'demo:ip', limit: 10, windowSeconds: 60 * 60 },
   searchPerIp: { name: 'search:ip', limit: 40, windowSeconds: 60 },
+  // Every tick, add and status change is a sync. 120 a minute is far above a
+  // person clicking, and far below a script hammering the database.
+  syncPerUser: { name: 'sync:user', limit: 120, windowSeconds: 60 },
 } satisfies Record<string, Rule>;
 
 /**

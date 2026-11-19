@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { LocalDateTime } from '@/components/ClientOnly';
 import { isAllowedImage } from '@/lib/image-hosts';
 import { notFound } from 'next/navigation';
 import { AlertCircle, Play, RotateCcw } from 'lucide-react';
@@ -396,7 +397,7 @@ export default async function SeriesPage({
         </div>
 
         <p className="mt-16 text-[11px] text-[var(--color-mute)]">
-          Structure derived {new Date(series.computedAt).toLocaleString()}
+          Structure derived <LocalDateTime iso={new Date(series.computedAt).toISOString()} />
         </p>
       </div>
     </AppShell>

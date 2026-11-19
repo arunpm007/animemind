@@ -29,7 +29,7 @@ export function PosterDrift({ covers }: { covers: (string | null | undefined)[] 
         <div className="loop-x flex w-max gap-4" style={{ '--loop-dur': '120s' } as React.CSSProperties}>
           {[...row, ...row].map((src, i) => (
             <div key={i} className="relative aspect-[2/3] w-[130px] shrink-0 overflow-hidden rounded-lg">
-              <Image src={src} alt="" fill sizes="130px" className="object-cover" />
+              <Image src={src} alt="" fill sizes="130px" className="object-cover" loading="eager" />
             </div>
           ))}
         </div>

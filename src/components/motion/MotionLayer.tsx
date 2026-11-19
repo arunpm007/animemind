@@ -68,6 +68,8 @@ export function MotionLayer() {
         .toArray<HTMLElement>('section', content)
         // Anything already on screen is handled by the page-enter animation.
         .filter((s) => s.getBoundingClientRect().top > innerHeight * 0.9);
+      // Short pages have nothing below the fold; GSAP warns on an empty set.
+      if (targets.length === 0) return;
       gsap.set(targets, { opacity: 0, y: 48 });
       ScrollTrigger.batch(targets, {
         start: 'top 92%',
