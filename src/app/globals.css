@@ -26,24 +26,28 @@
 
 @theme {
   /* ── surfaces ── */
-  --color-bg: #08090b;
-  --color-surface: #101218;
-  --color-raised: #171a21;
-  --color-overlay: #1c2029;
-  --color-border: #262a33;
-  --color-border-strong: #343945;
+  /* Warm ink, not blue-black: the "ink & flame" theme runs through the
+     whole app, from the welcome page to the account form. */
+  --color-bg: #0b0806;
+  --color-surface: #15100c;
+  --color-raised: #1d1612;
+  --color-overlay: #241b16;
+  --color-border: #2e241e;
+  --color-border-strong: #43342a;
 
   /* ── text ── */
-  --color-text: #f4f5f7;
-  --color-dim: #9a9ea8;
+  --color-text: #f6f1ea;
+  --color-dim: #d6cbbf;
   /* Was #626773 — 3.07:1 on a raised surface, below the 4.5:1 WCAG AA needs
      for body text, and this token carries most of the 11px metadata in the
      app. Lifted in lightness only, so the hue is unchanged. */
-  --color-mute: #7c828f;
+  --color-mute: #b7aa9c;
 
   /* ── the only saturated colour ── */
-  --color-accent: #ff4d67;
-  --color-accent-soft: #ff8095;
+  --color-accent: #ff6a1a;
+  --color-accent-soft: #ff9a5a;
+  /* Text ON the accent. White on flame orange is under 3:1; ink is ~7:1. */
+  --color-on-accent: #1a0900;
 
   /* ── status ramp: low chroma on purpose, see rule 2 ── */
   --color-airing: #5fbf8a;
@@ -57,6 +61,7 @@
   /* ── type ── */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-dela), var(--font-geist-sans), sans-serif;
 
   /* ── motion: exactly two curves ── */
   --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
@@ -74,6 +79,14 @@
   /* Set per-page from the focused work's cover. The room changes colour; the
      furniture does not. */
   --key: 12 100% 65%;
+
+  /* The shōnen palette, shared by every page. */
+  --ink: #0b0806;
+  --ink-2: #15100c;
+  --flame: #ff6a1a;
+  --ember: #ff2e4d;
+  --gold: #ffc23d;
+  --spirit: #59d0ff;
 
   color-scheme: dark;
 }
@@ -104,11 +117,25 @@ body {
 
 /* ── the glass plane (z1) ─────────────────────────────────────────────── */
 .pane {
-  background: color-mix(in oklab, var(--color-surface) 78%, transparent);
+  /* A faint flame sheen from the upper left: the same key light as the
+     backdrop, so every panel sits in the same room. */
+  background:
+    linear-gradient(155deg, rgb(255 106 26 / 0.07), transparent 38%),
+    color-mix(in oklab, var(--color-surface) 80%, transparent);
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
-  border: 1px solid color-mix(in oklab, white 7%, transparent);
+  border: 1px solid color-mix(in oklab, white 8%, transparent);
   box-shadow: var(--edge-light), var(--shadow-1);
+}
+
+/* Every accent-filled control in the app becomes the flame gradient, without
+   touching each component: the class name is the selector. */
+.bg-\[var\(--color-accent\)\] {
+  background-image: linear-gradient(135deg, var(--gold) -20%, var(--flame) 45%, var(--ember) 120%);
+}
+button.bg-\[var\(--color-accent\)\], a.bg-\[var\(--color-accent\)\] {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4), 0 8px 24px -10px rgb(255 106 26 / 0.8);
+  font-weight: 600;
 }
 
 .pane-raised {
@@ -128,16 +155,17 @@ body {
 
 /* ── type scale ───────────────────────────────────────────────────────── */
 .t-display {
-  font-size: clamp(2rem, 5vw, 3rem);
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.1;
+  letter-spacing: -0.005em;
+  font-weight: 400;
 }
 .t-title {
-  font-size: clamp(1.35rem, 2.6vw, 1.75rem);
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 2.8vw, 1.9rem);
+  line-height: 1.15;
+  font-weight: 400;
 }
 .t-heading {
   font-size: 1.0625rem;
@@ -148,9 +176,9 @@ body {
 .t-label {
   font-size: 0.6875rem;
   line-height: 1;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-mute);
 }
 
@@ -249,6 +277,12 @@ body {
   outline-offset: 2px;
   border-radius: 4px;
 }
+/* Fields that draw their own, stronger focus glow opt out of the outline,
+   so focus is never shown twice. */
+.own-focus:focus-visible,
+.own-focus :focus-visible {
+  outline: none;
+}
 
 ::selection {
   background: color-mix(in oklab, var(--color-accent) 35%, transparent);
@@ -270,3 +304,382 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-strong);
 }
+
+/* ── welcome page motion ──────────────────────────────────────────────
+ * The endless loops are plain CSS: they run on the compositor and need no
+ * JavaScript. Everything scroll-linked is GSAP (see app/welcome/Landing.tsx).
+ * Each loop's track holds its content twice, so moving it by exactly half
+ * its length lands on an identical frame and the seam never shows.
+ * ------------------------------------------------------------------ */
+@keyframes loop-y {
+  to { transform: translate3d(0, -50%, 0); }
+}
+@keyframes loop-x {
+  to { transform: translate3d(-50%, 0, 0); }
+}
+.loop-y { animation: loop-y var(--loop-dur, 60s) linear infinite; }
+.loop-y.reverse { animation-direction: reverse; }
+.loop-x { animation: loop-x var(--loop-dur, 80s) linear infinite; }
+.loop-x.reverse { animation-direction: reverse; }
+.loop-pause:hover .loop-x { animation-play-state: paused; }
+
+.text-outline {
+  color: transparent;
+  -webkit-text-stroke: 1px color-mix(in oklab, var(--color-text) 55%, transparent);
+}
+
+/* Lifted, lit poster card used across the welcome page. */
+.poster-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--color-raised);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, white 8%, transparent),
+    0 18px 40px -12px rgb(0 0 0 / 0.7);
+}
+.poster-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgb(255 255 255 / 0.14) 48%, transparent 60%);
+  background-size: 260% 100%;
+  background-position: 120% 0;
+  transition: background-position 0.8s var(--ease-enter);
+}
+.poster-card:hover::after { background-position: -20% 0; }
+
+.scroll-cue {
+  animation: scroll-cue 1.8s var(--ease-enter) infinite;
+  transform-origin: top;
+}
+@keyframes scroll-cue {
+  0% { transform: scaleY(0); opacity: 1; }
+  60% { transform: scaleY(1); opacity: 1; }
+  100% { transform: scaleY(1); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loop-y, .loop-x, .scroll-cue { animation: none; }
+}
+
+/* ── in-app motion (see components/motion/MotionLayer.tsx) ─────────────── */
+.poster {
+  transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition:
+    transform 0.5s var(--ease-enter),
+    box-shadow 0.5s var(--ease-enter);
+}
+.poster[data-tilting] {
+  transition-duration: 0.12s, 0.5s;
+  box-shadow: var(--edge-light), 0 24px 50px -18px rgb(0 0 0 / 0.85);
+}
+.poster::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 0%), rgb(255 255 255 / 0.22), transparent 55%);
+  mix-blend-mode: overlay;
+  transition: opacity 0.3s;
+}
+.poster[data-tilting]::after { opacity: 1; }
+
+/* Opacity and translate only: a lingering transform or filter on this
+   wrapper would trap the app's fixed sheets inside it. */
+.page-enter { animation: page-enter 0.6s var(--ease-enter) both; }
+@keyframes page-enter {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poster { transform: none; transition: none; }
+  .page-enter { animation: none; }
+}
+
+/* ═════════════════ welcome page: "ink & flame" theme ═════════════════
+ * Shōnen-poster palette: ink black, flame orange, ember crimson, a gold
+ * highlight and one cold spirit-blue for contrast. Scoped to .welcome so the
+ * app itself keeps its own quieter accent.
+ * ------------------------------------------------------------------ */
+.welcome { background: var(--ink); }
+.font-display { font-family: var(--font-display); font-weight: 400; }
+.flame-text {
+  background: linear-gradient(100deg, var(--gold) 0%, var(--flame) 45%, var(--ember) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.pop-shadow { filter: drop-shadow(5px 5px 0 rgb(89 208 255 / 0.85)); }
+
+/* ── background ── */
+.welcome-bg { background: radial-gradient(120% 80% at 50% 0%, #1d0f08 0%, var(--ink) 60%); overflow: hidden; }
+.aura {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.55;
+  mix-blend-mode: screen;
+  animation: aura-drift var(--d, 26s) ease-in-out infinite alternate;
+}
+.aura-a { width: 60vmax; height: 60vmax; left: -18vmax; top: -22vmax; background: radial-gradient(circle, var(--flame), transparent 65%); --d: 24s; }
+.aura-b { width: 50vmax; height: 50vmax; right: -16vmax; top: 18vh; background: radial-gradient(circle, var(--ember), transparent 65%); --d: 31s; opacity: 0.4; }
+.aura-c { width: 42vmax; height: 42vmax; left: 25vw; bottom: -26vmax; background: radial-gradient(circle, var(--spirit), transparent 65%); --d: 37s; opacity: 0.16; }
+@keyframes aura-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(6vmax, 4vmax, 0) scale(1.15); }
+}
+.screentone {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgb(255 255 255 / 0.13) 1.1px, transparent 1.6px);
+  background-size: 7px 7px;
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, transparent 35%, black 100%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, transparent 35%, black 100%);
+}
+.grain {
+  position: absolute;
+  inset: -50%;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* Manga "focus lines" radiating from the headline. */
+.focus-lines {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 220vmax;
+  height: 220vmax;
+  translate: -50% -50%;
+  background: repeating-conic-gradient(from 0deg, rgb(255 255 255 / 0.07) 0deg 0.6deg, transparent 0.6deg 4.5deg);
+  mask-image: radial-gradient(circle, transparent 14%, black 32%, transparent 55%);
+  -webkit-mask-image: radial-gradient(circle, transparent 14%, black 32%, transparent 55%);
+  animation: spin 140s linear infinite;
+}
+@keyframes spin { to { rotate: 360deg; } }
+
+/* ── calls to action ── */
+.cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 3.25rem;
+  padding: 0 1.75rem;
+  border-radius: 14px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: box-shadow 0.3s, background-color 0.3s, color 0.3s;
+}
+.cta .cta-arrow { transition: transform 0.35s var(--ease-enter); }
+.cta:hover .cta-arrow { transform: translateX(5px); }
+.cta-primary {
+  isolation: isolate;
+  overflow: hidden;
+  color: #1a0900;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--flame) 42%, var(--ember) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.55),
+    inset 0 -3px 0 rgb(0 0 0 / 0.18),
+    0 14px 40px -10px rgb(255 106 26 / 0.85),
+    0 0 70px -18px rgb(255 46 77 / 0.9);
+  animation: cta-breathe 2.8s ease-in-out infinite;
+}
+.cta-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.65) 47%, transparent 62%);
+  transform: translateX(-120%);
+  animation: cta-shine 3.4s var(--ease-enter) infinite;
+}
+.cta-primary:hover {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.6),
+    inset 0 -3px 0 rgb(0 0 0 / 0.18),
+    0 18px 50px -8px rgb(255 106 26 / 1),
+    0 0 110px -10px rgb(255 46 77 / 1);
+}
+@keyframes cta-shine { 0%, 55% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+@keyframes cta-breathe {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50% { filter: brightness(1.08) saturate(1.15); }
+}
+.cta-outline {
+  color: var(--color-text);
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(rgb(21 16 12 / 0.85), rgb(21 16 12 / 0.85)) padding-box,
+    linear-gradient(135deg, var(--gold), var(--ember) 50%, var(--spirit)) border-box;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.cta-outline:hover {
+  background:
+    linear-gradient(rgb(255 106 26 / 0.18), rgb(255 46 77 / 0.12)) padding-box,
+    linear-gradient(135deg, var(--gold), var(--ember) 50%, var(--spirit)) border-box;
+  box-shadow: 0 0 40px -12px rgb(255 106 26 / 0.8);
+}
+.cta-ghost {
+  color: var(--color-text);
+  padding: 0 1.1rem;
+}
+.cta-ghost span.u {
+  background: linear-gradient(var(--flame), var(--flame)) left bottom / 0% 2px no-repeat;
+  padding-bottom: 3px;
+  transition: background-size 0.35s var(--ease-enter);
+}
+.cta-ghost:hover span.u { background-size: 100% 2px; }
+
+/* ── the warning card ── */
+.hazard {
+  background: repeating-linear-gradient(-45deg, var(--gold) 0 14px, var(--ink) 14px 28px);
+  background-size: 40px 40px;
+  animation: hazard-move 1.6s linear infinite;
+}
+@keyframes hazard-move { to { background-position: 40px 0; } }
+.warn-card {
+  background:
+    linear-gradient(var(--ink-2), var(--ink-2)) padding-box,
+    linear-gradient(135deg, var(--gold), var(--ember)) border-box;
+  border: 2px solid transparent;
+  animation: warn-glow 2.4s ease-in-out infinite;
+}
+@keyframes warn-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(255 46 77 / 0), 0 30px 80px -30px rgb(255 106 26 / 0.6); }
+  50% { box-shadow: 0 0 0 6px rgb(255 46 77 / 0.12), 0 30px 90px -20px rgb(255 106 26 / 0.85); }
+}
+.stamp {
+  border: 3px solid var(--ember);
+  color: var(--ember);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 2px rgb(255 46 77 / 0.35);
+  mix-blend-mode: screen;
+}
+/* A glowing underline that draws itself under the words — below the
+   baseline, so it never reads as a strike-through. */
+.marker {
+  padding-bottom: 0.12em;
+  background: linear-gradient(90deg, var(--gold), var(--flame) 50%, var(--ember)) left bottom / 0% 0.16em no-repeat;
+  text-decoration: none;
+  transition: background-size 1.1s var(--ease-enter) 0.4s;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+[data-in] .marker {
+  background-size: 100% 0.16em;
+  text-shadow: 0 0 22px rgb(255 106 26 / 0.45);
+}
+
+/* Form and feature cards: a hairline of flame around ink. */
+.flame-card {
+  background:
+    linear-gradient(160deg, rgb(255 106 26 / 0.1), transparent 40%) padding-box,
+    linear-gradient(rgb(21 16 12 / 0.92), rgb(21 16 12 / 0.92)) padding-box,
+    linear-gradient(140deg, rgb(255 194 61 / 0.7), rgb(255 255 255 / 0.06) 35%, rgb(255 255 255 / 0.04) 65%, rgb(255 46 77 / 0.6)) border-box;
+  border: 1.5px solid transparent;
+  box-shadow: 0 40px 120px -40px rgb(255 106 26 / 0.55), 0 0 0 1px rgb(0 0 0 / 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* ── manga panels ── */
+.manga-panel {
+  background:
+    linear-gradient(160deg, rgb(255 106 26 / 0.1), transparent 45%),
+    linear-gradient(var(--ink-2), var(--ink-2)) padding-box,
+    linear-gradient(140deg, rgb(255 255 255 / 0.28), rgb(255 255 255 / 0.04) 40%, rgb(255 106 26 / 0.5)) border-box;
+  border: 1.5px solid transparent;
+  clip-path: polygon(0 0, calc(100% - 36px) 0, 100% 36px, 100% 100%, 36px 100%, 0 calc(100% - 36px));
+}
+.manga-panel .tone {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgb(255 194 61 / 0.35) 1.2px, transparent 1.7px);
+  background-size: 8px 8px;
+  mask-image: linear-gradient(225deg, black, transparent 45%);
+  -webkit-mask-image: linear-gradient(225deg, black, transparent 45%);
+  pointer-events: none;
+}
+.manga-panel .fan > * { transition: transform 0.6s var(--ease-enter); }
+.manga-panel:hover .fan > :nth-child(1) { transform: translate(-22px, -50%) rotate(-14deg) !important; }
+.manga-panel:hover .fan > :nth-child(3) { transform: translate(22px, -50%) rotate(14deg) !important; }
+.num-outline {
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgb(255 194 61 / 0.35);
+}
+.kanji-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  /* Kanji in a light Mincho: the heavy display face turns small kanji
+     into solid blobs. These are system fonts on macOS, iOS and Windows. */
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  color: var(--flame);
+}
+.jp { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; font-weight: 600; }
+.kanji-tag::before { content: ''; width: 28px; height: 2px; background: currentColor; }
+.brush-underline {
+  position: relative;
+  display: inline-block;
+}
+.brush-underline::after {
+  content: '';
+  position: absolute;
+  left: -2%;
+  right: -2%;
+  bottom: 0.02em;
+  height: 0.28em;
+  z-index: -1;
+  background: linear-gradient(90deg, var(--flame), var(--ember));
+  border-radius: 40% 60% 55% 45% / 60% 40% 60% 40%;
+  transform: skewX(-12deg) rotate(-1.5deg);
+  opacity: 0.85;
+}
+
+/* ── the looping demo ── */
+.step-bar { transform-origin: left; transform: scaleX(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .aura, .focus-lines, .cta-primary, .cta-primary::before, .hazard, .warn-card { animation: none; }
+  .marker { transition: none; }
+}
+
+/* ── legibility over the warm backdrop ─────────────────────────────────
+ * Secondary text sits on a moving, textured background, so it gets a little
+ * more weight and a soft shadow to lift it off the grain. In the base layer
+ * on purpose: an explicit font-medium / font-semibold on the element still
+ * wins over this default.
+ * ------------------------------------------------------------------ */
+@layer base {
+  .text-\[var\(--color-dim\)\],
+  .text-\[var\(--color-mute\)\],
+  .text-\[10px\],
+  .text-\[11px\],
+  .text-\[12px\],
+  .text-xs,
+  .t-label {
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+  }
+}
+
+/* Inside the app the room stays, but quieter: content is read, not admired. */
+.welcome-bg.quiet .aura-a { opacity: 0.32; }
+.welcome-bg.quiet .aura-b { opacity: 0.22; }
+.welcome-bg.quiet .screentone {
+  opacity: 0.45;
+  mask-image: radial-gradient(ellipse 85% 80% at 55% 45%, transparent 55%, black 100%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 80% at 55% 45%, transparent 55%, black 100%);
+}
+.welcome-bg.quiet .grain { opacity: 0.035; }

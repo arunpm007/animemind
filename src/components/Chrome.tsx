@@ -35,16 +35,16 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
       <Link href="/" className="mb-5 flex items-center gap-2.5 px-2">
         <span
           aria-hidden
-          className="size-2 rounded-full bg-[var(--color-accent)]"
-          style={{ boxShadow: '0 0 12px var(--color-accent)' }}
+          className="size-2.5 rounded-full bg-[var(--flame)]"
+          style={{ boxShadow: '0 0 16px var(--flame)' }}
         />
-        <span className="text-[15px] font-semibold tracking-[-0.02em]">AnimeMind</span>
+        <span className="font-display text-[17px]">AnimeMind</span>
       </Link>
 
       <button
         type="button"
         onClick={onSearch}
-        className="mb-3 flex items-center gap-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-left text-sm text-[var(--color-mute)] transition-colors duration-[160ms] ease-[var(--ease-state)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-dim)]"
+        className="mb-3 flex items-center gap-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-left text-sm text-[var(--color-mute)] transition-colors duration-[160ms] ease-[var(--ease-state)] hover:border-[var(--flame)]/60 hover:text-[var(--color-text)] hover:shadow-[0_0_20px_-8px_var(--flame)]"
       >
         <Search className="size-4 shrink-0" />
         <span className="flex-1">Search</span>
@@ -64,17 +64,17 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
               className={cn(
                 'relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors duration-[160ms] ease-[var(--ease-state)]',
                 active
-                  ? 'bg-[var(--color-raised)] text-[var(--color-text)]'
+                  ? 'bg-gradient-to-r from-[var(--flame)]/20 to-transparent font-medium text-[var(--color-text)]'
                   : 'text-[var(--color-dim)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text)]',
               )}
             >
               {active ? (
                 <span
                   aria-hidden
-                  className="absolute top-1/2 left-0 h-4 w-0.5 -translate-y-1/2 rounded-r bg-[var(--color-accent)]"
+                  className="absolute top-1/2 left-0 h-5 w-[3px] -translate-y-1/2 rounded-r bg-[var(--color-accent)] shadow-[0_0_12px_var(--flame)]"
                 />
               ) : null}
-              <Icon className="size-4 shrink-0" />
+              <Icon className={cn('size-4 shrink-0', active && 'text-[var(--flame)]')} />
               {label}
             </Link>
           );

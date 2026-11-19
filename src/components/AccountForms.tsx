@@ -63,7 +63,7 @@ export function DisplayNameForm({ initial }: { initial: string }) {
           <button
             type="submit"
             disabled={state === 'busy'}
-            className="flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3.5 py-2 text-xs font-medium text-white disabled:opacity-60"
+            className="flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3.5 py-2 text-xs font-medium text-[var(--color-on-accent)] disabled:opacity-60"
           >
             {state === 'busy' ? <Loader2 className="size-3 animate-spin" /> : null}
             Save name
@@ -176,7 +176,7 @@ export function PasswordForm() {
         <button
           type="submit"
           disabled={state === 'busy' || !current || !next}
-          className="flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-[var(--color-on-accent)] disabled:opacity-50"
         >
           {state === 'busy' ? <Loader2 className="size-3.5 animate-spin" /> : null}
           Change password

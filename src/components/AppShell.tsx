@@ -1,9 +1,11 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Sidebar, TabBar } from './Chrome';
 import { SearchPalette } from './SearchPalette';
-import { CinemaBackdrop } from './motion/CinemaBackdrop';
+import { InkBackdrop } from './motion/InkBackdrop';
+import { MotionLayer } from './motion/MotionLayer';
 
 /**
  * The shell: nav, the search palette, and the z0 light.
@@ -19,6 +21,7 @@ export function AppShell({
   accent?: string | null;
 }) {
   const [search, setSearch] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -43,7 +46,7 @@ export function AppShell({
 
   return (
     <>
-      <CinemaBackdrop accent={accent} intensity={0.5} />
+      <InkBackdrop accent={accent} quiet />
       <div className="relative z-10 flex min-h-dvh">
         <Sidebar onSearch={() => setSearch(true)} />
         {/* `relative` scopes any page-level absolute art (the series hero) to the
@@ -55,9 +58,13 @@ export function AppShell({
           tabIndex={-1}
           className="relative min-w-0 flex-1 pb-24 outline-none md:pb-0"
         >
-          {children}
+          {/* Keyed by path so each navigation replays the entrance. */}
+          <div key={pathname} className="page-enter">
+            {children}
+          </div>
         </main>
       </div>
+      <MotionLayer />
       <TabBar onSearch={() => setSearch(true)} />
       {search ? <SearchPalette onClose={() => setSearch(false)} /> : null}
     </>

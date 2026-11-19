@@ -51,7 +51,7 @@ export function AddButton({
         'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-[transform,background-color] duration-[160ms] ease-[var(--ease-state)] active:scale-95',
         state === 'failed'
           ? 'bg-[var(--color-ended)]/20 text-[var(--color-ended)]'
-          : 'bg-[var(--color-accent)] text-white',
+          : 'bg-[var(--color-accent)] text-[var(--color-on-accent)]',
         className,
       )}
     >

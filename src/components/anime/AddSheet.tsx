@@ -207,7 +207,7 @@ export function AddSheet({
                     onClose();
                     router.push(`/series/${savedSlug}`);
                   }}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-[var(--color-on-accent)]"
                 >
                   Open series <ArrowRight className="size-3.5" />
                 </button>
@@ -345,7 +345,7 @@ export function AddSheet({
                 type="button"
                 onClick={() => void save()}
                 disabled={busy}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white transition-transform duration-[160ms] active:scale-[0.98] disabled:opacity-60"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-[var(--color-on-accent)] transition-transform duration-[160ms] active:scale-[0.98] disabled:opacity-60"
               >
                 {busy ? <Loader2 className="size-4 animate-spin" /> : null}
                 {held ? 'Update' : 'Add to library'}

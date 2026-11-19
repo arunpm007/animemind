@@ -131,18 +131,19 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
         tabIndex={-1}
         className="pane-raised rise relative w-full max-w-xl overflow-hidden rounded-2xl outline-none"
       >
-        <div className="flex items-center gap-3 border-b border-[var(--color-border)] px-4">
+        {/* The row lights up instead of a box drawn inside it. */}
+        <div className="own-focus flex items-center gap-3 border-b-2 border-[var(--color-border)] px-4 transition-colors focus-within:border-[var(--flame)] focus-within:bg-[var(--flame)]/[0.06]">
           {loading ? (
             <Loader2 className="size-4 shrink-0 animate-spin text-[var(--color-mute)]" />
           ) : (
-            <Search className="size-4 shrink-0 text-[var(--color-mute)]" />
+            <Search className="size-4 shrink-0 text-[var(--flame)]" />
           )}
           <input
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search for an anime…"
-            className="flex-1 bg-transparent py-4 text-[15px] outline-none placeholder:text-[var(--color-mute)]"
+            className="flex-1 bg-transparent py-4 text-[15px] outline-none focus-visible:outline-none placeholder:text-[var(--color-mute)]"
           />
           <kbd className="rounded border border-[var(--color-border)] px-1.5 py-0.5 text-[10px] text-[var(--color-mute)]">
             esc
@@ -273,7 +274,7 @@ export function SearchPalette({ onClose }: { onClose: () => void }) {
                                     : 'In library'}
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1.5 rounded-full bg-[var(--color-accent)] px-3 py-1.5 text-[11px] font-medium text-white">
+                        <span className="flex items-center gap-1.5 rounded-full bg-[var(--color-accent)] px-3 py-1.5 text-[11px] font-medium text-[var(--color-on-accent)]">
                           <Plus className="size-3" />
                           Add
                         </span>

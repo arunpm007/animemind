@@ -189,7 +189,10 @@ export function Section({
   return (
     <section className={cn('flex flex-col gap-4', className)}>
       <header className="flex items-baseline justify-between gap-4">
-        <h2 className="t-label">{title}</h2>
+        <h2 className="t-label flex items-center gap-2">
+          <span aria-hidden className="h-[2px] w-5 rounded-full bg-gradient-to-r from-[var(--gold)] to-[var(--flame)]" />
+          {title}
+        </h2>
         {action}
       </header>
       {children}
@@ -221,7 +224,7 @@ export function Empty({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="pane flex flex-col items-start gap-3 rounded-xl px-6 py-8">
+    <div className="pane relative flex flex-col items-start gap-3 overflow-hidden rounded-2xl border-dashed px-6 py-8">
       <p className="t-heading">{title}</p>
       {body ? (
         <p className="max-w-prose text-sm text-[var(--color-dim)]">{body}</p>

@@ -38,7 +38,8 @@ export default async function NextPage() {
     <AppShell accent={accent}>
       <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-8 sm:py-14">
         <header className="rise mb-10">
-          <h1 className="t-title">Up next</h1>
+          <p className="kanji-tag mb-3">次 <span className="font-sans text-[11px] font-medium tracking-[0.2em] text-[var(--color-mute)] uppercase">Your backlog</span></p>
+          <h1 className="t-display">Up next</h1>
           <p className="mt-2 text-sm text-[var(--color-dim)]">
             {total === 0
               ? 'Nothing waiting on a decision.'

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { FirstRun } from '@/components/FirstRun';
+import { PosterDrift } from '@/components/motion/PosterDrift';
 import { EpisodeProgress } from '@/components/anime/EpisodeProgress';
 import { Empty, Poster, Section, StatusDot } from '@/components/ui/primitives';
 import { getDashboard } from '@/server/services/library';
@@ -29,14 +30,24 @@ export default async function TodayPage() {
 
   return (
     <AppShell accent={accent}>
-      <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-8 sm:py-14">
+      <PosterDrift
+        covers={[
+          ...data.newlyAvailable.map((i) => i.work.coverUrl),
+          ...data.continueWatching.map((i) => i.work.coverUrl),
+          ...data.waitingOn.map((i) => i.work.coverUrl),
+        ]}
+      />
+      <div className="relative mx-auto w-full max-w-5xl px-4 py-10 sm:px-8 sm:py-14">
         <header className="rise mb-12">
-          <p className="t-label mb-3">
+          <p className="kanji-tag mb-3">
+            今日{' '}
+            <span className="font-sans text-[11px] font-medium tracking-[0.2em] text-[var(--color-mute)] uppercase">
             {new Date().toLocaleDateString(undefined, {
               weekday: 'long',
               day: 'numeric',
               month: 'long',
             })}
+            </span>
           </p>
           <h1 className="t-display">
             {greeting()}
@@ -65,7 +76,7 @@ export default async function TodayPage() {
                 {data.newlyAvailable.map((item) => (
                   <article
                     key={item.work.id}
-                    className="pane flex items-center gap-4 rounded-xl p-3 pr-5"
+                    className="flame-card flex items-center gap-4 rounded-2xl p-3 pr-5"
                   >
                     <div className="w-[52px] shrink-0">
                       <Poster
@@ -99,7 +110,7 @@ export default async function TodayPage() {
                     {item.seriesSlug ? (
                       <Link
                         href={`/series/${item.seriesSlug}`}
-                        className="shrink-0 rounded-full bg-[var(--color-accent)] px-4 py-2 text-xs font-medium text-white transition-transform duration-[160ms] ease-[var(--ease-state)] active:scale-95"
+                        className="shrink-0 rounded-full bg-[var(--color-accent)] px-4 py-2 text-xs font-medium text-[var(--color-on-accent)] transition-transform duration-[160ms] ease-[var(--ease-state)] active:scale-95"
                       >
                         Start
                       </Link>
@@ -272,7 +283,7 @@ export default async function TodayPage() {
                   <dd>
                     <Link
                       href={target}
-                      className="tnum text-xl font-semibold transition-colors duration-[160ms] hover:text-[var(--color-accent-soft)]"
+                      className="tnum font-display flame-text text-3xl transition-opacity duration-[160ms] hover:opacity-80"
                     >
                       {value}
                     </Link>

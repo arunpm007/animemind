@@ -231,7 +231,7 @@ export function StatusControl(props: StatusControlProps) {
                   className={cn(
                     'tnum h-6 flex-1 rounded text-[10px] transition-colors duration-[120ms]',
                     rating && n <= rating
-                      ? 'bg-[var(--color-accent)] text-white'
+                      ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
                       : 'bg-[var(--color-surface)] text-[var(--color-mute)] hover:bg-[var(--color-overlay)]',
                   )}
                 >
@@ -264,7 +264,7 @@ export function StatusControl(props: StatusControlProps) {
                     { close: false },
                   )
                 }
-                className="rise mt-1.5 w-full rounded-md bg-[var(--color-accent)] py-1 text-[11px] font-medium text-white"
+                className="rise mt-1.5 w-full rounded-md bg-[var(--color-accent)] py-1 text-[11px] font-medium text-[var(--color-on-accent)]"
               >
                 Save note
               </button>

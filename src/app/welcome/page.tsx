@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { currentActor } from '@/lib/session';
 import { demoEnabled, signupsOpen } from '@/server/auth/config';
+import { getShowcase } from '@/server/services/showcase';
 import Landing from './Landing';
 
 // Reads deployment switches and the session cookie at request time.
@@ -15,5 +16,6 @@ export const dynamic = 'force-dynamic';
  */
 export default async function WelcomePage() {
   if (await currentActor()) redirect('/');
-  return <Landing signupsOpen={signupsOpen()} demoEnabled={demoEnabled()} />;
+  const showcase = await getShowcase();
+  return <Landing signupsOpen={signupsOpen()} demoEnabled={demoEnabled()} showcase={showcase} />;
 }

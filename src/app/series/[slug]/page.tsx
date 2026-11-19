@@ -109,7 +109,7 @@ export default async function SeriesPage({
           ) : null}
 
           <div className="min-w-0 flex-1">
-            <p className="t-label mb-3">Series</p>
+            <p className="kanji-tag mb-3">シリーズ <span className="font-sans text-[11px] font-medium tracking-[0.2em] text-[var(--color-mute)] uppercase">Series</span></p>
             <h1 className="t-display mb-4">{series.title}</h1>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[var(--color-dim)]">
               {series.releaseSummary.airing ? <StatusDot status="airing" /> : null}
@@ -183,9 +183,9 @@ export default async function SeriesPage({
               style={{ background: 'var(--color-accent)' }}
             >
               {series.nextUp.reason === 'rewatch_available' ? (
-                <RotateCcw className="size-4 text-white" />
+                <RotateCcw className="size-4 text-[var(--color-on-accent)]" />
               ) : (
-                <Play className="size-4 fill-white text-white" />
+                <Play className="size-4 fill-[var(--color-on-accent)] text-[var(--color-on-accent)]" />
               )}
             </div>
             <div className="min-w-0 flex-1">
@@ -243,7 +243,7 @@ export default async function SeriesPage({
                       className={cn(
                         'relative z-10 mt-[7px] flex size-[23px] shrink-0 items-center justify-center rounded-full border-2 text-[10px]',
                         done
-                          ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-white'
+                          ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-on-accent)]'
                           : unaired
                             ? 'border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg)] text-[var(--color-mute)]'
                             : 'border-[var(--color-border-strong)] bg-[var(--color-bg)] text-[var(--color-dim)]',

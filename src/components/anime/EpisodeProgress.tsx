@@ -128,7 +128,7 @@ export function EpisodeProgress({
                 e.preventDefault();
                 submitDraft();
               }}
-              className="rounded-md bg-[var(--color-accent)] px-2 py-0.5 text-[11px] font-medium text-white"
+              className="rounded-md bg-[var(--color-accent)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-on-accent)]"
             >
               Set
             </button>
