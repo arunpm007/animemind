@@ -30,8 +30,11 @@ export const GET = route(async ({ req }) => {
   const next = safeNext(url.searchParams.get('next'));
   const token = readCookie(req, REFRESH_COOKIE);
 
+  // No refresh cookie at all: most likely someone who has never been here.
+  // Show them what AnimeMind is before asking for a password. (A returning
+  // user whose session has merely expired still goes straight to sign-in.)
   if (!token) {
-    return NextResponse.redirect(new URL('/sign-in', url.origin));
+    return NextResponse.redirect(new URL('/welcome', url.origin));
   }
 
   // Over the limit: back to sign-in without touching the cookies.

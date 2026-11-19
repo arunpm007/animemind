@@ -44,7 +44,7 @@ export function FirstRun() {
         className="pane group flex items-center gap-4 rounded-xl p-5 text-left transition-colors duration-[160ms] hover:border-[var(--color-border-strong)]"
       >
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent)]">
-          <Search className="size-4 text-white" />
+          <Search className="size-4 text-[var(--color-on-accent)]" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-medium">

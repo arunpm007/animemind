@@ -45,7 +45,7 @@ export default function Error({
           <button
             type="button"
             onClick={reset}
-            className="flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white"
+            className="flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-[var(--color-on-accent)]"
           >
             <RotateCcw className="size-3.5" />
             Try again

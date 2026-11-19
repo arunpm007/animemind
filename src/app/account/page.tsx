@@ -29,25 +29,30 @@ export default async function AccountPage() {
     <AppShell>
       <div className="mx-auto w-full max-w-xl px-4 py-10 sm:px-8 sm:py-14">
         <header className="rise mb-10">
-          <h1 className="t-title">Account</h1>
+          <p className="kanji-tag mb-3">設定 <span className="font-sans text-[11px] font-medium tracking-[0.2em] text-[var(--color-mute)] uppercase">Settings</span></p>
+          <h1 className="t-display">Account</h1>
           <p className="mt-2 text-sm text-[var(--color-dim)]">{me?.email}</p>
         </header>
 
         <div className="flex flex-col gap-8">
-          <section className="pane rounded-xl p-5">
+          <section className="flame-card rounded-2xl p-5">
             <DisplayNameForm initial={me?.displayName ?? ''} />
           </section>
 
-          <section className="pane rounded-xl p-5">
+          <section className="overflow-hidden rounded-2xl border border-[var(--gold)]/35 bg-[var(--color-surface)]/90">
+            <div aria-hidden className="hazard h-1.5" />
+            <div className="p-5">
             <h2 className="t-heading mb-1">Password</h2>
-            <p className="mb-4 text-[13px] text-[var(--color-dim)]">
+            <p className="mb-4 rounded-lg border border-[var(--gold)]/25 bg-[var(--gold)]/[0.06] px-3 py-2 text-[13px] text-[var(--color-dim)]">
+              <span className="jp mr-1.5 text-[var(--flame)]">注意</span>
               There&apos;s no password reset. If you lose your password, this account
               can&apos;t be recovered — keep it somewhere safe.
             </p>
             <PasswordForm />
+            </div>
           </section>
 
-          <section className="pane rounded-xl p-5">
+          <section className="pane rounded-2xl p-5">
             <h2 className="t-heading mb-1">Sessions</h2>
             <p className="mb-4 text-[13px] text-[var(--color-dim)]">
               {sessions.length} {sessions.length === 1 ? 'session' : 'sessions'} on

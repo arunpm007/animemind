@@ -23,7 +23,8 @@ export default async function WaitingPage() {
     <AppShell accent={data.waitingOn[0]?.work.accentHex ?? null}>
       <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-8 sm:py-14">
         <header className="rise mb-10">
-          <h1 className="t-title">Waiting on</h1>
+          <p className="kanji-tag mb-3">待機 <span className="font-sans text-[11px] font-medium tracking-[0.2em] text-[var(--color-mute)] uppercase">Announced</span></p>
+          <h1 className="t-display">Waiting on</h1>
           <p className="mt-2 text-sm text-[var(--color-dim)]">
             Continuations that have been announced but have not arrived.
           </p>
@@ -47,7 +48,7 @@ export default async function WaitingPage() {
                     {item.seriesSlug ? (
                       <Link
                         href={`/series/${item.seriesSlug}`}
-                        className="shrink-0 rounded-full bg-[var(--color-accent)] px-4 py-2 text-xs font-medium text-white"
+                        className="shrink-0 rounded-full bg-[var(--color-accent)] px-4 py-2 text-xs font-medium text-[var(--color-on-accent)]"
                       >
                         Start
                       </Link>

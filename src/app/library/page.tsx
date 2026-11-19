@@ -110,7 +110,7 @@ export default async function LibraryPage({
 
   const chip =
     'rounded-full border px-3 py-1.5 text-[12px] transition-colors duration-[160ms]';
-  const chipOn = 'border-transparent bg-[var(--color-accent)] text-white';
+  const chipOn = 'border-transparent bg-[var(--color-accent)] text-[var(--color-on-accent)]';
   const chipOff =
     'border-[var(--color-border)] text-[var(--color-dim)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text)]';
 
@@ -118,7 +118,8 @@ export default async function LibraryPage({
     <AppShell accent={entries[0]?.accentHex ?? null}>
       <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-8 sm:py-14">
         <header className="rise mb-6">
-          <h1 className="t-title">Library</h1>
+          <p className="kanji-tag mb-3">書庫 <span className="font-sans text-[11px] font-medium tracking-[0.2em] text-[var(--color-mute)] uppercase">Your collection</span></p>
+          <h1 className="t-display">Library</h1>
           <p className="mt-2 text-sm text-[var(--color-dim)]">
             {entries.length} {entries.length === 1 ? 'series' : 'series'}
             {totalSeasons !== entries.length ? (
