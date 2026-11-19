@@ -5,7 +5,10 @@ import { RULES, enforce } from '@/server/http/rate-limit';
 
 const request = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(10).max(200),
+  newPassword: z
+    .string()
+    .min(10, 'Use at least 10 characters — a short sentence works well.')
+    .max(200, 'Keep it under 200 characters.'),
 });
 
 export const POST = authed(async ({ req, actor }) => {

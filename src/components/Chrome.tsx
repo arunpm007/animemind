@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Clock3, Compass, Library, ListChecks, Search, Tv, UserRound } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { ShortcutKey } from './ClientOnly';
 
 /**
  * Navigation is five destinations and a search key. That ceiling is a
@@ -48,9 +49,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
       >
         <Search className="size-4 shrink-0" />
         <span className="flex-1">Search</span>
-        <kbd className="rounded border border-[var(--color-border)] px-1.5 py-0.5 text-[10px] text-[var(--color-mute)]">
-          ⌘K
-        </kbd>
+        <ShortcutKey className="rounded border border-[var(--color-border)] px-1.5 py-0.5 text-[10px] text-[var(--color-mute)]" />
       </button>
 
       <nav aria-label="Sections" className="flex flex-col gap-0.5">

@@ -28,13 +28,16 @@ export const clientKind = z.enum(['web', 'ios', 'android', 'cli']);
 export type ClientKind = z.infer<typeof clientKind>;
 
 export const credentials = z.object({
-  email: z.string().email().max(254),
+  email: z.string().email('Enter a valid email address.').max(254, 'That email address is too long.'),
   /**
    * Minimum 10. Length beats composition rules: a long passphrase is both
    * stronger and likelier to be remembered than a short string with a symbol
    * bolted on.
    */
-  password: z.string().min(10).max(200),
+  password: z
+    .string()
+    .min(10, 'Use at least 10 characters — a short sentence works well.')
+    .max(200, 'Keep it under 200 characters.'),
 });
 
 export const registerRequest = credentials.extend({

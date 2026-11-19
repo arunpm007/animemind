@@ -30,9 +30,10 @@ export default async function WatchingPage() {
           <Empty title="Nothing in progress" body="Everything you've started is finished." />
         ) : (
           <PosterGrid>
-            {entries.map((e) => (
+            {entries.map((e, i) => (
               <PosterCard
                 key={e.work.id}
+                priority={i < 12}
                 work={e.work}
                 href={e.seriesSlug ? `/series/${e.seriesSlug}` : undefined}
                 footer={

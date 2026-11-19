@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { RULES, enforce } from '@/server/http/rate-limit';
 import { watchState } from '@/contracts';
 import { addToLibrary, listLibrary } from '@/server/services/library';
 import { authed, body, ok, query } from '@/server/http/api';
@@ -30,6 +31,8 @@ const addRequest = z
   });
 
 export const POST = authed(async ({ req, actor }) => {
+  // Adding shares the sync budget: both write to the same tables.
+  await enforce(RULES.syncPerUser, actor.userId);
   const input = await body(req, addRequest);
   return ok(await addToLibrary(actor, input), undefined, { status: 201 });
 });

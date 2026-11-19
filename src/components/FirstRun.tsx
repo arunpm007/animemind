@@ -1,20 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { Search, Sparkles } from 'lucide-react';
+import { ShortcutKey } from './ClientOnly';
 
-/**
- * Read once, lazily, on the client.
- *
- * Showing ⌘K to a Windows user makes the single instruction on the page
- * wrong. Resolved in a lazy initialiser rather than an effect: it never
- * changes, so an effect would only buy an extra render and a flash of the
- * wrong key.
- */
-function usesCommandKey(): boolean {
-  if (typeof navigator === 'undefined') return true;
-  return /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
-}
 
 /**
  * What a brand-new account sees instead of an empty page.
@@ -29,8 +17,6 @@ function usesCommandKey(): boolean {
  * visible. Without saying so, a new user reasonably concludes it is broken.
  */
 export function FirstRun() {
-  const [mac] = useState(usesCommandKey);
-
   function openSearch() {
     // The shell owns the palette; this is the same path the keyboard takes.
     window.dispatchEvent(new KeyboardEvent('keydown', { key: '/', bubbles: true }));
@@ -55,9 +41,7 @@ export function FirstRun() {
             again.
           </span>
         </span>
-        <kbd className="hidden shrink-0 rounded border border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-mute)] sm:block">
-          {mac ? '⌘K' : 'Ctrl K'}
-        </kbd>
+        <ShortcutKey className="hidden shrink-0 rounded border border-[var(--color-border)] px-2 py-1 text-[11px] text-[var(--color-mute)] sm:block" />
       </button>
 
       <div className="flex gap-3 px-1">

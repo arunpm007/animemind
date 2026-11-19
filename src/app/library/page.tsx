@@ -185,7 +185,7 @@ export default async function LibraryPage({
         {all.length === 0 ? (
           <Empty
             title="Your library is empty"
-            body="Press ⌘K and search for something you've watched. You only have to tell it once."
+            body="Open search and look up something you've watched. You only have to tell it once."
           />
         ) : entries.length === 0 ? (
           <Empty

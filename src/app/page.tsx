@@ -3,6 +3,7 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
 import { FirstRun } from '@/components/FirstRun';
 import { PosterDrift } from '@/components/motion/PosterDrift';
+import { Greeting, TodayDate } from '@/components/ClientOnly';
 import { EpisodeProgress } from '@/components/anime/EpisodeProgress';
 import { Empty, Poster, Section, StatusDot } from '@/components/ui/primitives';
 import { getDashboard } from '@/server/services/library';
@@ -10,13 +11,6 @@ import { requireActor } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 5) return 'Still up';
-  if (h < 12) return 'Good morning';
-  if (h < 18) return 'Good afternoon';
-  return 'Good evening';
-}
 
 export default async function TodayPage() {
   const actor = await requireActor('/');
@@ -42,16 +36,11 @@ export default async function TodayPage() {
           <p className="kanji-tag mb-3">
             今日{' '}
             <span className="font-sans text-[11px] font-medium tracking-[0.2em] text-[var(--color-mute)] uppercase">
-            {new Date().toLocaleDateString(undefined, {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-            })}
+            <TodayDate />
             </span>
           </p>
           <h1 className="t-display">
-            {greeting()}
-            {data.greetingName ? `, ${data.greetingName}` : ''}.
+            <Greeting name={data.greetingName} />
           </h1>
           <p className="mt-3 text-[15px] text-[var(--color-dim)]">
             {firstRun
@@ -80,6 +69,7 @@ export default async function TodayPage() {
                   >
                     <div className="w-[52px] shrink-0">
                       <Poster
+                        priority
                         work={item.work}
                         href={item.seriesSlug ? `/series/${item.seriesSlug}` : undefined}
                       />
@@ -154,6 +144,7 @@ export default async function TodayPage() {
                   >
                     <div className="w-[52px] shrink-0">
                       <Poster
+                        priority
                         work={item.work}
                         href={
                           item.seriesSlug ? `/series/${item.seriesSlug}` : undefined
@@ -221,6 +212,7 @@ export default async function TodayPage() {
                   >
                     <div className="w-[40px] shrink-0">
                       <Poster
+                        priority
                         work={item.work}
                         href={item.seriesSlug ? `/series/${item.seriesSlug}` : undefined}
                       />

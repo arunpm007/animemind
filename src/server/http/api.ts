@@ -166,10 +166,35 @@ type Handler<Ctx> = (args: {
 }) => Promise<Response>;
 
 /** Wrap a public route: error mapping, request id, no identity required. */
+const UNSAFE = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/**
+ * Refuse state-changing requests that a browser says came from another site.
+ *
+ * SameSite=Lax cookies already stop most cross-site writes; this is the
+ * second lock on the same door. Only a PRESENT, MISMATCHED Origin is refused:
+ * the iOS/Android apps and server-to-server calls send no Origin at all and
+ * authenticate with a bearer token, so they are unaffected.
+ */
+export function crossSiteWrite(req: Request): boolean {
+  if (!UNSAFE.has(req.method)) return false;
+  const origin = req.headers.get('origin');
+  if (!origin) return false;
+  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? new URL(req.url).host;
+  try {
+    return new URL(origin).host !== host;
+  } catch {
+    return true; // "null" or garbage: an opaque origin is never this site
+  }
+}
+
 export function route<Ctx = unknown>(handler: Handler<Ctx>) {
   return async (req: Request, ctx: Ctx): Promise<Response> => {
     const requestId = randomUUID();
     try {
+      if (crossSiteWrite(req)) {
+        throw new HttpError('forbidden', 'Cross-site requests are not allowed.');
+      }
       const res = await handler({ req, ctx, requestId });
       res.headers.set('x-request-id', requestId);
       return res;
