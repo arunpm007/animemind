@@ -108,6 +108,33 @@ interface KitsuAnimeAttrs {
 
 const day = (v?: string | null) => (v ? v.slice(0, 10) : null);
 
+/**
+ * Turn whatever image URL Kitsu returns into a permanent one, or null.
+ *
+ * Kitsu sometimes answers with a pre-signed link straight into its storage
+ * bucket (`kitsu-production-media.s3.<region>.backblazeb2.com/...?X-Amz-...`)
+ * instead of its CDN. Those links expire after 15 minutes — and we store them —
+ * and their host is not one we proxy, so they also crashed the page they were
+ * rendered on. The same file is served permanently from media.kitsu.app at the
+ * same path, so rewrite to that and drop the signature.
+ */
+export function kitsuImageUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (url.hostname === 'media.kitsu.app' || url.hostname === 'media.kitsu.io') {
+    return `https://${url.hostname}${url.pathname}`;
+  }
+  if (url.hostname.endsWith('.backblazeb2.com') && url.hostname.startsWith('kitsu-production-media.')) {
+    return `https://media.kitsu.app${url.pathname}`;
+  }
+  return null;
+}
+
 export function normaliseKitsuWork(r: KitsuResource): RawWork {
   const a = r.attributes ?? {};
   const titles = a.titles ?? {};
@@ -130,10 +157,11 @@ export function normaliseKitsuWork(r: KitsuResource): RawWork {
     titleNative: titles.ja_jp ?? null,
     synonyms: [...new Set(synonyms)],
     synopsis: a.synopsis || null,
-    coverUrl:
-      a.posterImage?.large ?? a.posterImage?.medium ?? a.posterImage?.original ?? null,
+    coverUrl: kitsuImageUrl(
+      a.posterImage?.large ?? a.posterImage?.medium ?? a.posterImage?.original,
+    ),
     // Kitsu is the only source we have that ships a real banner.
-    bannerUrl: a.coverImage?.large ?? a.coverImage?.original ?? null,
+    bannerUrl: kitsuImageUrl(a.coverImage?.large ?? a.coverImage?.original),
     // 0 means unknown or still running, never "no episodes" — conflating the
     // two makes an airing show render as 0/0 and look finished.
     episodeCount: a.episodeCount && a.episodeCount > 0 ? a.episodeCount : null,

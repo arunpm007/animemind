@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { isAllowedImage } from '@/lib/image-hosts';
 import { notFound } from 'next/navigation';
 import { AlertCircle, Play, RotateCcw } from 'lucide-react';
 import { AppShell } from '@/components/AppShell';
@@ -78,10 +79,10 @@ export default async function SeriesPage({
   return (
     <AppShell accent={hero?.accentHex ?? null}>
       {/* ── z0: the work's own art, far out of focus ── */}
-      {hero?.coverUrl ? (
+      {isAllowedImage(hero?.coverUrl) ? (
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[46vh] overflow-hidden">
           <Image
-            src={hero.coverUrl}
+            src={hero!.coverUrl!}
             alt=""
             fill
             priority

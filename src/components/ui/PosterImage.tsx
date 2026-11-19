@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useState } from 'react';
 import { ImageOff } from 'lucide-react';
+import { isAllowedImage } from '@/lib/image-hosts';
 
 /**
  * Cover art with a graceful failure.
@@ -37,7 +38,8 @@ export function PosterImage({
 }) {
   const [broken, setBroken] = useState(false);
 
-  if (!src || broken) {
+  // An unapproved host would make next/image throw and crash the whole list.
+  if (!isAllowedImage(src) || broken) {
     return (
       <div className="flex size-full items-center justify-center p-2 text-center">
         {quiet ? (
