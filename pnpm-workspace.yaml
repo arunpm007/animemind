@@ -2,3 +2,8 @@ allowBuilds:
   esbuild: true
   sharp: false
   unrs-resolver: false
+
+# Security: force patched transitive versions (see pnpm audit).
+overrides:
+  source-map-js: ">=1.2.2"
+  minimatch@>=7 <11.0.1: "^11.0.1"

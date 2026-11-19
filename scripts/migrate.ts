@@ -83,7 +83,50 @@ async function main() {
   }
 
   console.log(`\n${ran} migration(s) applied, ${plan.length - ran} already current.`);
+
+  await secureAppRole(sql);
   await sql.end();
+}
+
+/**
+ * Harden the application role after migrating.
+ *
+ * The bootstrap creates `animemind_app` with the password `animemind_app` so a
+ * fresh clone works locally — and this repository is public. On any non-local
+ * database that would be a known password, so APP_DB_PASSWORD is required and
+ * applied here. The role must also be unable to bypass row-level security:
+ * some hosted Postgres roles can, which would make every policy silently inert.
+ */
+async function secureAppRole(sql: postgres.Sql) {
+  const isLocal = /@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(url);
+  const password = process.env.APP_DB_PASSWORD;
+
+  if (password) {
+    if (password.length < 24) throw new Error('APP_DB_PASSWORD must be at least 24 characters.');
+    // ALTER ROLE cannot take a bind parameter; format(%L) quotes it safely.
+    await sql`SELECT set_config('animemind.app_pw', ${password}, false)`;
+    await sql.unsafe(
+      `DO $$ BEGIN EXECUTE format('ALTER ROLE animemind_app PASSWORD %L', current_setting('animemind.app_pw')); END $$`,
+    );
+    await sql`SELECT set_config('animemind.app_pw', '', false)`;
+    console.log('  app role password set from APP_DB_PASSWORD');
+  } else if (!isLocal) {
+    throw new Error(
+      'Refusing to finish: this is not a local database and APP_DB_PASSWORD is not set, ' +
+        "so the app role still has the public default password. Set APP_DB_PASSWORD (24+ chars) and re-run.",
+    );
+  }
+
+  const [role] = await sql<{ rolbypassrls: boolean; rolsuper: boolean }[]>`
+    SELECT rolbypassrls, rolsuper FROM pg_roles WHERE rolname = 'animemind_app'`;
+  if (!role) throw new Error('The animemind_app role does not exist.');
+  if (role.rolbypassrls || role.rolsuper) {
+    throw new Error(
+      'animemind_app can bypass row-level security (BYPASSRLS or superuser). ' +
+        'Run: ALTER ROLE animemind_app NOSUPERUSER NOBYPASSRLS;',
+    );
+  }
+  console.log('  app role checked: cannot bypass row-level security');
 }
 
 main().catch((err) => {

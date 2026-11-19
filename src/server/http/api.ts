@@ -41,6 +41,8 @@ export class HttpError extends Error {
     public readonly code: ErrorCode,
     message: string,
     public readonly details?: ApiError['details'],
+    /** Seconds until a rate-limited caller may retry (sent as Retry-After). */
+    public readonly retryAfter?: number,
   ) {
     super(message);
     this.name = 'HttpError';
@@ -68,7 +70,8 @@ export function fail(error: HttpError, requestId: string) {
       requestId,
     },
   };
-  return NextResponse.json(body, { status: STATUS[error.code] });
+  const headers = error.retryAfter ? { 'retry-after': String(error.retryAfter) } : undefined;
+  return NextResponse.json(body, { status: STATUS[error.code], headers });
 }
 
 /**
@@ -92,9 +95,17 @@ function toHttpError(err: unknown, requestId: string): HttpError {
   }
 
   if (err instanceof AuthError) {
-    return err.code === 'email_taken'
-      ? new HttpError('conflict', err.message)
-      : new HttpError('unauthorized', err.message);
+    switch (err.code) {
+      case 'email_taken':
+        return new HttpError('conflict', err.message);
+      case 'signups_closed':
+      case 'demo_readonly':
+        return new HttpError('forbidden', err.message);
+      case 'demo_unavailable':
+        return new HttpError('not_found', err.message);
+      default:
+        return new HttpError('unauthorized', err.message);
+    }
   }
 
   if (err instanceof ProviderNotFoundError) {

@@ -10,9 +10,11 @@ import {
   setAuthCookies,
   unauthorized,
 } from '@/server/http/api';
+import { RULES, clientIp, enforce } from '@/server/http/rate-limit';
 
 export const POST = route(async ({ req }) => {
   const input = await body(req, refreshRequest);
+  await enforce(RULES.refreshPerIp, clientIp(req));
   // Mobile sends the token in the body; web has it only as a cookie.
   const token = input.refreshToken ?? readCookie(req, REFRESH_COOKIE);
   if (!token) throw unauthorized('No session to refresh.');

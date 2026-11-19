@@ -154,9 +154,30 @@ development data. Coverage is concentrated where the risk is:
 
 ## Deployment
 
-Any Node host plus a Postgres database. `vercel.json` schedules the refresh
-worker every six hours; on another host, call `GET /api/v1/cron/sync` with
-`Authorization: Bearer $CRON_SECRET` on the same cadence.
+Any Node host plus a Postgres database. `vercel.json` runs the daily job at
+03:00 UTC (Vercel's free plan allows daily crons): it refreshes titles, prunes
+expired sessions and rate-limit rows, and resets the demo account. On another
+host, call `GET /api/v1/cron/sync` with `Authorization: Bearer $CRON_SECRET`
+once a day.
 
 Set `DATABASE_URL` to the **non-owner** role and `DATABASE_MIGRATION_URL` to
 the owner. Collapsing them into one silently disables row-level security.
+
+Before the first production migration, set `APP_DB_PASSWORD` (24+ characters).
+`pnpm db:migrate` refuses to finish against a non-local database without it,
+because the bootstrap gives `animemind_app` a public default password, and it
+also refuses if that role could bypass row-level security.
+
+### Security settings
+
+| Variable | Default | What it does |
+|---|---|---|
+| `ALLOW_SIGNUPS` | on in dev, **off in production** | Open account creation |
+| `DEMO_EMAIL` | unset | Enables "Try the demo": a shared account, reset nightly |
+| `CLIENT_IP_HEADER` | `x-real-ip` | Trusted client-IP header for rate limiting |
+| `APP_DB_PASSWORD` | — | Password for the app's database role |
+
+Built-in protections: per-IP and per-account rate limits on sign-in, sign-up,
+token refresh, password change and search (stored in Postgres, race-safe);
+signed-out search uses only the local catalog; strict security headers and a
+Content Security Policy; row-level security on every user table.

@@ -7,6 +7,7 @@ import {
   route,
   setAuthCookies,
 } from '@/server/http/api';
+import { RULES, clientIp, enforce } from '@/server/http/rate-limit';
 
 /**
  * Silent re-authentication for the web app.
@@ -35,6 +36,13 @@ export const GET = route(async ({ req }) => {
   const token = readCookie(req, REFRESH_COOKIE);
 
   if (!token) {
+    return NextResponse.redirect(new URL('/sign-in', url.origin));
+  }
+
+  // Over the limit: back to sign-in without touching the cookies.
+  try {
+    await enforce(RULES.refreshPerIp, clientIp(req));
+  } catch {
     return NextResponse.redirect(new URL('/sign-in', url.origin));
   }
 

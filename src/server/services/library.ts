@@ -86,6 +86,7 @@ export async function search(
   actor: Actor | null,
   q: string,
   limit: number,
+  options: { useProvider?: boolean } = {},
 ): Promise<SearchOutcome> {
   const provider = defaultProvider();
   const db = unscoped();
@@ -93,7 +94,12 @@ export async function search(
   let ids: string[] = [];
   let degraded = false;
 
-  try {
+  // Local-only search: answers from titles already in the catalog, with no
+  // third-party call and no writes. Used for signed-out visitors, so an
+  // anonymous bot cannot spend our provider quota or grow the database.
+  if (options.useProvider === false) {
+    ids = (await searchLocal(q, limit)).map((r) => r.id);
+  } else try {
     const raw = await provider.search(q, limit);
     // Persist what we found. Search is the cheapest way to warm the catalog,
     // and it means adding a title afterwards needs no further provider call.
